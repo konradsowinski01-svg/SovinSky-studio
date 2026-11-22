@@ -188,8 +188,8 @@ export function usePageMotion(ready: boolean) {
               immediateRender: true,
               scrollTrigger: {
                 trigger: visual,
-                start: "top 95%",
-                end: "center 55%",
+                start: "top 72%",
+                end: "center 50%",
                 scrub: 0.8,
                 invalidateOnRefresh: true,
               },
@@ -205,8 +205,8 @@ export function usePageMotion(ready: boolean) {
               immediateRender: false,
               scrollTrigger: {
                 trigger: visual,
-                start: "bottom 32%",
-                end: "bottom 2%",
+                start: "bottom 52%",
+                end: "bottom 24%",
                 scrub: 0.8,
                 invalidateOnRefresh: true,
               },
