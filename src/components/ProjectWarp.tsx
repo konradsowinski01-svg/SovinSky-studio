@@ -76,8 +76,6 @@ void main() {
   float radius = .16 + .16 * hash(fc + 3.);
   float dotMask = 1. - smoothstep(radius - .1, radius, length(ff));
   float sand = dotMask * step(hash(fc), amount * .55) * smoothstep(1.3, .95, abs(x / CARD));
-  vec3 sandColor = hash(fc + 41.) > .5 ? vec3(0., .95, 1.) : vec3(1., .1, .14);
-
   // Cyberpunk glitch: smooth noise-driven sideways slides with soft edges.
   float fine = vnoise(vec2(y * 22., time * 5.)) - .5;
   float broad = vnoise(vec2(y * 6., time * 1.8 + 10.)) - .5;
@@ -89,6 +87,9 @@ void main() {
   u += broad * a2 * .5;
   u += sin(gl_FragCoord.y * .7 + time * 24.) * a2 * .008;
   u += sin(y * 11. + time * 2.6 * dir) * a2 * .09;
+
+  vec3 sandColor = texture2D(image, clamp(vec2(u * .5 + .5, y), 0., 1.)).rgb;
+  sandColor = sandColor * 1.35 + .06;
 
   float alpha = 1. - smoothstep(.994, 1.0, abs(u));
   if (alpha <= 0.) {
@@ -116,8 +117,7 @@ void main() {
   float d = amount * 1.25 - .12 - n;
   alpha *= 1. - step(0., d);
   float seam = (1. - smoothstep(0., .16, abs(d))) * smoothstep(0., .25, amount);
-  vec3 grain = hash(cell + 41.) > .5 ? vec3(0., .95, 1.) : vec3(1., .08, .12);
-  color = mix(color, grain, seam * .85);
+  color = mix(color, mid * 1.4 + .08, seam * .85);
   color *= 1. - .2 * amount * step(.5, fract(gl_FragCoord.y / 3.));
   color *= 1. + amount * .25;
   color *= .98 + .04 * sin(time * .25 + y * 4.);
