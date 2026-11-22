@@ -1,0 +1,74 @@
+.wrap {
+  --wm-stop0: #8a4a6a;
+  --wm-stop1: #3a1a20;
+  --sil-color: #a01800;
+  --sil-start: 20%;
+
+  position: absolute;
+  left: -5vw;
+  top: calc(0.8vh - 0.24em);
+  width: max-content;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--font-gothic);
+  font-weight: 700;
+  line-height: 0.86;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+@media (max-width: 809.98px) {
+  .wrap {
+    top: calc(0.8vh + 58px - 0.24em);
+  }
+}
+
+.measure {
+  display: block;
+  visibility: hidden;
+  padding: 0.04em 0 0.12em;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  padding: 0.04em 0 0.12em;
+  overflow: clip;
+  transform: scaleY(1.34);
+  transform-origin: 50% 0;
+}
+
+.blend {
+  mix-blend-mode: color-dodge;
+}
+
+.silhouette {
+  mix-blend-mode: darken;
+}
+
+.letter {
+  display: block;
+  will-change: transform;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-repeat: no-repeat;
+}
+
+.blend .letter {
+  background-image: radial-gradient(
+    56% 156% at 47.1% 1.9%,
+    var(--wm-stop0) 0%,
+    var(--wm-stop1) 100%
+  );
+}
+
+.silhouette .letter {
+  background-image: linear-gradient(
+    180deg,
+    rgb(143 143 143 / 0) var(--sil-start),
+    var(--sil-color) 100%
+  );
+}

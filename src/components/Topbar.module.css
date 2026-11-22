@@ -1,0 +1,78 @@
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px var(--gutter);
+  pointer-events: none;
+}
+
+.topbar a {
+  pointer-events: auto;
+}
+
+.logo {
+  display: inline-flex;
+  flex-direction: column;
+  font-family: var(--font-gothic);
+  font-weight: 700;
+  line-height: 0.78;
+  color: var(--ink);
+  transition: color 0.25s;
+}
+
+.logoMark {
+  font-size: 1.55rem;
+  letter-spacing: -0.01em;
+}
+
+.logoRest {
+  font-size: 1.55rem;
+  margin-left: 0.9em;
+  letter-spacing: -0.01em;
+}
+
+.logo:hover {
+  color: var(--accent);
+}
+
+.nav {
+  display: flex;
+  gap: clamp(16px, 3vw, 28px);
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.nav a {
+  opacity: 0.88;
+  transition: opacity 0.25s var(--appear-ease), color 0.25s, transform 0.35s var(--appear-ease);
+}
+
+.nav a:hover,
+.nav a:focus-visible {
+  opacity: 1;
+  color: var(--accent-2);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 809.98px) {
+  .topbar {
+    padding-top: 14px;
+  }
+
+  .logoMark,
+  .logoRest {
+    font-size: 1.35rem;
+  }
+
+  .nav {
+    gap: 14px;
+    font-size: 0.88rem;
+  }
+}

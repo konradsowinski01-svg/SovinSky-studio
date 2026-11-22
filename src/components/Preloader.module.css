@@ -1,0 +1,114 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  color: var(--ink);
+  pointer-events: auto;
+}
+
+.leaving {
+  animation: leave 0.55s var(--appear-ease) forwards;
+}
+
+@keyframes leave {
+  0% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 100% 0);
+  }
+}
+
+.sheet {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+}
+
+.panel {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+.mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-gothic);
+  font-weight: 700;
+  font-size: clamp(3rem, 11vw, 6.5rem);
+  letter-spacing: 0.02em;
+  line-height: 0.9;
+  text-align: center;
+}
+
+.markGhost,
+.markFill {
+  display: block;
+}
+
+.markGhost {
+  opacity: 0.2;
+}
+
+.markFill {
+  position: absolute;
+  inset: 0;
+  color: var(--ink);
+}
+
+.labels {
+  position: absolute;
+  left: var(--gutter);
+  bottom: 45px;
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.count {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 36px;
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  font: 400 clamp(80px, 14vw, 200px) / 0.75 var(--font-mono);
+  letter-spacing: -0.07em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pct {
+  margin: 0.1em 0 0 0.18em;
+  font-size: 0.24em;
+  letter-spacing: 0;
+  opacity: 0.5;
+  line-height: 1;
+}
+
+.bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  background: var(--accent);
+  transform-origin: 0 50%;
+}
+
+@media (max-width: 809.98px) {
+  .labels {
+    bottom: 32px;
+    left: 16px;
+  }
+
+  .count {
+    font-size: clamp(72px, 26vw, 128px);
+    bottom: 28px;
+    right: 16px;
+  }
+}

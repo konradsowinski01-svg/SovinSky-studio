@@ -1,0 +1,23 @@
+.app {
+  min-height: 100dvh;
+  background: var(--black);
+}
+
+.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.revealed {
+  visibility: visible;
+  animation: reveal 0.65s var(--ease-reveal) forwards;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

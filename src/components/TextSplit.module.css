@@ -1,0 +1,28 @@
+.root {
+  display: block;
+}
+
+.word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.char {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+
+/* global so GSAP can target */
+.char :global(.charInner) {
+  display: inline-block;
+  transform: translateY(110%);
+  will-change: transform;
+}
+
+.space {
+  display: inline-block;
+  width: 0.28em;
+}

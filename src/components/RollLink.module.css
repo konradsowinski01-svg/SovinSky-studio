@@ -1,0 +1,46 @@
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.95rem;
+}
+
+.roll {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  height: 1.25em;
+}
+
+.rollIn {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.45s var(--appear-ease);
+}
+
+.t {
+  display: block;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.link:hover .rollIn,
+.link:focus-visible .rollIn {
+  transform: translateY(-50%);
+}
+
+.link:focus-visible {
+  outline: none;
+  color: var(--accent);
+}
+
+.arrow {
+  opacity: 0.7;
+  transition: transform 0.35s var(--appear-ease), opacity 0.25s;
+}
+
+.link:hover .arrow,
+.link:focus-visible .arrow {
+  opacity: 1;
+  transform: translate(2px, -1px);
+}
