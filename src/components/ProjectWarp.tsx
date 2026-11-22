@@ -126,8 +126,10 @@ void main() {
 
   // Sand-grain dissolve: tiny screen-space grains, tinted cyan or red, where
   // the card is forming / breaking up.
-  vec2 cell = floor(gl_FragCoord.xy / 1.5);
+  vec2 drift = vec2(sin(time * .7 + y * 5.) * 5., time * 14.);
+  vec2 cell = floor((gl_FragCoord.xy - drift) / 1.5);
   float n = hash(cell + (dir > 0. ? 0. : 17.));
+  n += sin(time * 2.2 + hash(cell + 3.) * 6.283) * .05;
   float d = amount * 1.25 - .12 - n;
   alpha *= 1. - step(0., d);
   float seam = (1. - smoothstep(0., .16, abs(d))) * smoothstep(0., .25, amount);
