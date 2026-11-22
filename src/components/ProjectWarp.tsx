@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { onVelocity } from "../lib/lenisStore";
 import styles from "./ProjectWarp.module.css";
 
 const VERTEX = `
@@ -15,14 +16,12 @@ varying vec2 uv;
 uniform sampler2D image;
 uniform float time;
 uniform float aspect;
-uniform float rectTop;
-uniform float rectHeight;
+uniform float twist;
+uniform float velocity;
 
 const float DEPTH = 1.8;
-const float TURNS = 8.;
-const float FLAT_TOP = .16;
-const float FLAT_BOTTOM = .84;
-const float RAMP = .3;
+// Card half-width inside the canvas; the canvas bleeds sideways for the waves.
+const float CARD = 1. / 1.36;
 
 vec3 smear(vec2 q, vec2 dir) {
   vec3 acc = vec3(0.);
@@ -45,18 +44,19 @@ void main() {
   float y = uv.y;
   float x = uv.x * 2. - 1.;
 
-  // Twist depends on where the row sits on screen, so the ribbon coils near the
-  // viewport edges and unwinds flat in the middle no matter how fast it scrolls.
-  float sy = rectTop + (1. - y) * rectHeight;
-  float bottom = clamp((sy - FLAT_BOTTOM) / RAMP, 0., 1.);
-  float top = clamp((FLAT_TOP - sy) / RAMP, 0., 1.);
-  float amount = max(bottom, top);
-  float theta = (bottom - top) * TURNS * pow(amount, 1.35);
+  // The whole card coils like a DNA strand; rows farther from the screen centre
+  // turn more, so the twist reads as one continuous helix.
+  float amount = abs(twist);
+  float outer = twist > 0. ? 1. - y : y;
+  float theta = sign(twist) * amount * (1.1 + 4.6 * outer);
 
-  float width = 1. - .38 * smoothstep(0., 1., amount);
+  float width = CARD * (1. - .3 * amount);
+  float px = x / width;
+  px += sin(y * 7. + time * 2.4) * velocity * .014;
+  px += sin(y * 19. - time * 3.1) * velocity * .004;
+
   float c = cos(theta);
   float s = sin(theta);
-  float px = x / width;
   float denom = c - px * s / DEPTH;
   if (abs(denom) < .015) {
     gl_FragColor = vec4(0.);
@@ -73,8 +73,8 @@ void main() {
   vec2 t = vec2(u * .5 + .5, y);
   alpha *= roundedMask(t);
 
-  float distort = smoothstep(0., .6, amount);
-  float split = distort * (.012 + .02 * abs(u)) * (theta < 0. ? -1. : 1.);
+  float distort = smoothstep(0., .7, amount) * (.4 + .6 * outer);
+  float split = distort * (.012 + .02 * abs(u)) * sign(twist);
   vec2 blurDir = vec2(distort * .05, 0.);
   vec3 r = smear(t + vec2(split, 0.), blurDir);
   vec3 cy = smear(t - vec2(split, 0.), blurDir);
@@ -231,8 +231,8 @@ export function ProjectWarp({ title, index }: Props) {
 
     const timeLocation = gl.getUniformLocation(program, "time");
     const aspectLocation = gl.getUniformLocation(program, "aspect");
-    const rectTopLocation = gl.getUniformLocation(program, "rectTop");
-    const rectHeightLocation = gl.getUniformLocation(program, "rectHeight");
+    const twistLocation = gl.getUniformLocation(program, "twist");
+    const velocityLocation = gl.getUniformLocation(program, "velocity");
     const dpr = Math.min(devicePixelRatio || 1, 1.5);
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -244,18 +244,29 @@ export function ProjectWarp({ title, index }: Props) {
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
+    let targetVelocity = 0;
+    let smoothVelocity = 0;
+    const unsubscribe = onVelocity((value) => {
+      targetVelocity = Math.max(-14, Math.min(14, value));
+    });
+
     const start = performance.now();
     let frame = 0;
     const render = (now: number) => {
       frame = requestAnimationFrame(render);
+      smoothVelocity += (targetVelocity - smoothVelocity) * 0.1;
+      targetVelocity *= 0.92;
       const rect = canvas.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > innerHeight) return;
+      const center = (rect.top + rect.height / 2) / innerHeight - 0.5;
+      const t = Math.min(1, Math.max(0, (Math.abs(center) - 0.1) / 0.5));
+      const twist = Math.sign(center) * t * t * (3 - 2 * t);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1f(timeLocation, (now - start) / 1000);
-      gl.uniform1f(aspectLocation, rect.width / Math.max(1, rect.height));
-      gl.uniform1f(rectTopLocation, rect.top / innerHeight);
-      gl.uniform1f(rectHeightLocation, rect.height / innerHeight);
+      gl.uniform1f(aspectLocation, (rect.width / 1.36) / Math.max(1, rect.height));
+      gl.uniform1f(twistLocation, twist);
+      gl.uniform1f(velocityLocation, smoothVelocity);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
     frame = requestAnimationFrame(render);
@@ -263,6 +274,7 @@ export function ProjectWarp({ title, index }: Props) {
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      unsubscribe();
       gl.deleteTexture(texture);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);

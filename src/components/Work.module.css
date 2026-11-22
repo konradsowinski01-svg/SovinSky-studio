@@ -1,5 +1,6 @@
 .work {
   position: relative;
+  overflow-x: clip;
   padding: clamp(48px, 8vw, 96px) var(--gutter) 140px;
 }
 
@@ -23,9 +24,15 @@
 
 .list {
   display: grid;
-  gap: clamp(56px, 8vw, 110px);
-  max-width: 1180px;
+  gap: clamp(72px, 10vw, 140px);
+  width: min(100%, 72vw, 860px);
   margin: 0 auto;
+}
+
+@media (max-width: 809.98px) {
+  .list {
+    width: 84%;
+  }
 }
 
 .proj {
@@ -47,7 +54,6 @@
   position: relative;
   aspect-ratio: 16 / 9;
   width: 100%;
-  overflow: hidden;
 }
 
 .visual > :not([data-project-warp]) {
