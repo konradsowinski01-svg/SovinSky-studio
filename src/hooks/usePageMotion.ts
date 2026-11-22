@@ -174,19 +174,20 @@ export function usePageMotion(ready: boolean) {
           },
         );
 
-        const bend = card.querySelector<HTMLElement>("[data-proj-bend]");
-        if (bend) {
-          gsap.fromTo(
-            bend,
-            { y: 70, scale: 0.96 },
-            {
-              y: 0,
-              scale: 1,
-              ease: "none",
-              scrollTrigger: { trigger: card, start: "top bottom", end: "top 55%", scrub: true },
+        const drift = () => innerWidth * 0.55;
+        gsap
+          .timeline({
+            scrollTrigger: {
+              trigger: card,
+              start: "top bottom",
+              end: "bottom top",
+              scrub: 0.6,
+              invalidateOnRefresh: true,
             },
-          );
-        }
+          })
+          .fromTo(card, { x: drift }, { x: 0, ease: "sine.out", duration: 0.44 })
+          .to(card, { x: 0, duration: 0.12 })
+          .to(card, { x: () => -drift(), ease: "sine.in", duration: 0.44 });
 
         const sun = card.querySelector<HTMLElement>("[data-proj-sun]");
         if (sun) {

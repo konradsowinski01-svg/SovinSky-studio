@@ -16,10 +16,8 @@ varying vec2 uv;
 uniform sampler2D image;
 uniform float time;
 uniform float aspect;
-uniform float twist;
 uniform float velocity;
 
-const float DEPTH = 1.8;
 // Card half-width inside the canvas; the canvas bleeds sideways for the waves.
 const float CARD = 1. / 1.36;
 
@@ -44,25 +42,9 @@ void main() {
   float y = uv.y;
   float x = uv.x * 2. - 1.;
 
-  // The whole card coils like a DNA strand; rows farther from the screen centre
-  // turn more, so the twist reads as one continuous helix.
-  float amount = abs(twist);
-  float outer = twist > 0. ? 1. - y : y;
-  float theta = sign(twist) * amount * (1.1 + 4.6 * outer);
-
-  float width = CARD * (1. - .3 * amount);
-  float px = x / width;
-  px += sin(y * 7. + time * 2.4) * velocity * .014;
-  px += sin(y * 19. - time * 3.1) * velocity * .004;
-
-  float c = cos(theta);
-  float s = sin(theta);
-  float denom = c - px * s / DEPTH;
-  if (abs(denom) < .015) {
-    gl_FragColor = vec4(0.);
-    return;
-  }
-  float u = px / denom;
+  float u = x / CARD;
+  u += sin(y * 7. + time * 2.4) * velocity * .014;
+  u += sin(y * 19. - time * 3.1) * velocity * .004;
 
   float alpha = 1. - smoothstep(.994, 1.0, abs(u));
   if (alpha <= 0.) {
@@ -73,19 +55,14 @@ void main() {
   vec2 t = vec2(u * .5 + .5, y);
   alpha *= roundedMask(t);
 
-  float distort = smoothstep(0., .7, amount) * (.4 + .6 * outer);
-  float split = distort * (.012 + .02 * abs(u)) * sign(twist);
+  float distort = smoothstep(0., 10., abs(velocity));
+  float split = distort * (.008 + .016 * abs(u)) * sign(velocity);
   vec2 blurDir = vec2(distort * .05, 0.);
   vec3 r = smear(t + vec2(split, 0.), blurDir);
   vec3 cy = smear(t - vec2(split, 0.), blurDir);
   vec3 mid = smear(t, blurDir);
   vec3 color = vec3(r.r, (mid.g + cy.g) * .5, cy.b);
   color += vec3(-.06, .1, .16) * smoothstep(0., .08, abs(split)) * (1. - mid.r);
-
-  // Light falls off as a strip turns away; a soft highlight rides the fold.
-  float facing = (.4 + .6 * abs(c)) * (c < 0. ? .6 : 1.);
-  float sheen = pow(max(0., 1. - abs(px + s * .6)), 6.) * abs(s) * .25;
-  color = color * facing + sheen;
   color *= .98 + .04 * sin(time * .25 + y * 4.);
   gl_FragColor = vec4(color * alpha, alpha);
 }`;
@@ -231,7 +208,6 @@ export function ProjectWarp({ title, index }: Props) {
 
     const timeLocation = gl.getUniformLocation(program, "time");
     const aspectLocation = gl.getUniformLocation(program, "aspect");
-    const twistLocation = gl.getUniformLocation(program, "twist");
     const velocityLocation = gl.getUniformLocation(program, "velocity");
     const dpr = Math.min(devicePixelRatio || 1, 1.5);
     const resize = () => {
@@ -258,14 +234,10 @@ export function ProjectWarp({ title, index }: Props) {
       targetVelocity *= 0.92;
       const rect = canvas.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > innerHeight) return;
-      const center = (rect.top + rect.height / 2) / innerHeight - 0.5;
-      const t = Math.min(1, Math.max(0, (Math.abs(center) - 0.1) / 0.5));
-      const twist = Math.sign(center) * t * t * (3 - 2 * t);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1f(timeLocation, (now - start) / 1000);
       gl.uniform1f(aspectLocation, (rect.width / 1.36) / Math.max(1, rect.height));
-      gl.uniform1f(twistLocation, twist);
       gl.uniform1f(velocityLocation, smoothVelocity);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
