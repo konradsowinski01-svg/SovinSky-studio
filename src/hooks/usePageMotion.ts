@@ -174,23 +174,6 @@ export function usePageMotion(ready: boolean) {
           },
         );
 
-        const drift = () => innerWidth * 0.22;
-        gsap.fromTo(
-          card,
-          { x: () => -drift() },
-          {
-            x: drift,
-            ease: "none",
-            scrollTrigger: {
-              trigger: card,
-              start: "top bottom",
-              end: "bottom top",
-              scrub: 1.4,
-              invalidateOnRefresh: true,
-            },
-          },
-        );
-
         const sun = card.querySelector<HTMLElement>("[data-proj-sun]");
         if (sun) {
           gsap.fromTo(
