@@ -46,7 +46,7 @@ export function Work() {
                 </div>
               </div>
             </a>
-            <div className={styles.cap}>
+            <div className={styles.cap} data-proj-cap="">
               <h3 className={styles.title}>{project.title}</h3>
               <p className={styles.kind}>
                 {project.kind}, {project.year}

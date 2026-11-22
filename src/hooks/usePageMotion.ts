@@ -174,6 +174,46 @@ export function usePageMotion(ready: boolean) {
           },
         );
 
+        const cap = card.querySelector<HTMLElement>("[data-proj-cap]");
+        const visual = card.querySelector<HTMLElement>("[data-proj-visual]");
+        if (cap && visual) {
+          const away = () => -(card.getBoundingClientRect().left + cap.offsetWidth + 40);
+          gsap.fromTo(
+            cap,
+            { x: away, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              ease: "power2.out",
+              immediateRender: true,
+              scrollTrigger: {
+                trigger: visual,
+                start: "top 95%",
+                end: "center 55%",
+                scrub: 0.8,
+                invalidateOnRefresh: true,
+              },
+            },
+          );
+          gsap.fromTo(
+            cap,
+            { x: 0, opacity: 1 },
+            {
+              x: away,
+              opacity: 0,
+              ease: "power2.in",
+              immediateRender: false,
+              scrollTrigger: {
+                trigger: visual,
+                start: "bottom 32%",
+                end: "bottom 2%",
+                scrub: 0.8,
+                invalidateOnRefresh: true,
+              },
+            },
+          );
+        }
+
         const sun = card.querySelector<HTMLElement>("[data-proj-sun]");
         if (sun) {
           gsap.fromTo(
