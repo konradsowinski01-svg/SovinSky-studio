@@ -73,21 +73,24 @@ void main() {
   vec2 t = vec2(u * .5 + .5, y);
   alpha *= roundedMask(t);
 
-  float split = amount * (.03 + .045 * abs(u)) * dir;
+  float split = amount * (.05 + .06 * abs(u)) * dir;
   vec2 blurDir = vec2(a2 * .16, 0.);
   vec3 r = smear(t + vec2(split, 0.), blurDir);
   vec3 cy = smear(t - vec2(split, 0.), blurDir);
   vec3 mid = smear(t, blurDir);
   vec3 color = vec3(r.r, (mid.g + cy.g) * .5, cy.b);
-  color += vec3(-.08, .14, .22) * smoothstep(0., .03, abs(split)) * (1. - mid.r);
+  color += vec3(-.12, .22, .34) * smoothstep(0., .03, abs(split)) * (1. - mid.r);
 
-  // Pixel dissolve with a glowing seam where the card is forming / breaking up.
-  vec2 cell = floor(t * vec2(aspect, 1.) * 70.);
+  // Sand-grain dissolve: tiny screen-space grains, tinted cyan or red, where
+  // the card is forming / breaking up.
+  vec2 cell = floor(gl_FragCoord.xy / 2.);
   float n = hash(cell + (dir > 0. ? 0. : 17.));
   float d = amount * 1.25 - .12 - n;
-  alpha *= 1. - smoothstep(-.04, .04, d);
-  float seam = (1. - smoothstep(0., .1, abs(d))) * smoothstep(0., .25, amount);
-  color += vec3(1., .42, .1) * seam * .9;
+  alpha *= 1. - step(0., d);
+  float seam = (1. - smoothstep(0., .14, abs(d))) * smoothstep(0., .25, amount);
+  vec3 grain = hash(cell + 41.) > .5 ? vec3(0., .95, 1.) : vec3(1., .08, .12);
+  color = mix(color, grain, seam * .85);
+  alpha = max(alpha, seam * step(0., d) * step(.55, hash(cell + 7.)) * roundedMask(t));
   color *= 1. + amount * .25;
   color *= .98 + .04 * sin(time * .25 + y * 4.);
   gl_FragColor = vec4(color * alpha, alpha);
