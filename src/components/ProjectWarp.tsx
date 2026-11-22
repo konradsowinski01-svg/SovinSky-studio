@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { onVelocity } from "../lib/lenisStore";
 import styles from "./ProjectWarp.module.css";
 
 const VERTEX = `
@@ -15,12 +14,15 @@ precision highp float;
 varying vec2 uv;
 uniform sampler2D image;
 uniform float time;
-uniform float twist;
-uniform float velocity;
-uniform float hover;
 uniform float aspect;
+uniform float rectTop;
+uniform float rectHeight;
 
-const float DEPTH = 2.4;
+const float DEPTH = 1.8;
+const float TURNS = 8.;
+const float FLAT_TOP = .16;
+const float FLAT_BOTTOM = .84;
+const float RAMP = .3;
 
 vec3 smear(vec2 q, vec2 dir) {
   vec3 acc = vec3(0.);
@@ -43,25 +45,24 @@ void main() {
   float y = uv.y;
   float x = uv.x * 2. - 1.;
 
-  // Each row is a strip rotated around the vertical axis. The angle grows toward
-  // the edge the card is entering/leaving from, so the card coils like a spiral.
-  float edge = twist < 0. ? (.5 - y) : (y - .5);
-  float k = max(0., edge * 2. + .35);
-  float theta = twist * 2.4 * k * k;
-  theta += velocity * .06 * (y - .5);
-  theta += sin(y * 3.14159 + time * 1.3) * .03 * hover;
+  // Twist depends on where the row sits on screen, so the ribbon coils near the
+  // viewport edges and unwinds flat in the middle no matter how fast it scrolls.
+  float sy = rectTop + (1. - y) * rectHeight;
+  float bottom = clamp((sy - FLAT_BOTTOM) / RAMP, 0., 1.);
+  float top = clamp((FLAT_TOP - sy) / RAMP, 0., 1.);
+  float amount = max(bottom, top);
+  float theta = (bottom - top) * TURNS * pow(amount, 1.35);
 
+  float width = 1. - .38 * smoothstep(0., 1., amount);
   float c = cos(theta);
   float s = sin(theta);
-  float denom = c - x * s / DEPTH;
-  if (abs(denom) < .02) {
+  float px = x / width;
+  float denom = c - px * s / DEPTH;
+  if (abs(denom) < .015) {
     gl_FragColor = vec4(0.);
     return;
   }
-  float u = x / denom;
-
-  // Horizontal 3D ripple while scrolling.
-  u += sin(y * 9. + time * 2.2) * velocity * .0035;
+  float u = px / denom;
 
   float alpha = 1. - smoothstep(.994, 1.0, abs(u));
   if (alpha <= 0.) {
@@ -72,9 +73,9 @@ void main() {
   vec2 t = vec2(u * .5 + .5, y);
   alpha *= roundedMask(t);
 
-  float cx = abs(u);
-  float split = velocity * (.006 + .01 * cx);
-  vec2 blurDir = vec2(velocity * .016, velocity * .0015);
+  float distort = smoothstep(0., .6, amount);
+  float split = distort * (.012 + .02 * abs(u)) * (theta < 0. ? -1. : 1.);
+  vec2 blurDir = vec2(distort * .05, 0.);
   vec3 r = smear(t + vec2(split, 0.), blurDir);
   vec3 cy = smear(t - vec2(split, 0.), blurDir);
   vec3 mid = smear(t, blurDir);
@@ -83,7 +84,7 @@ void main() {
 
   // Light falls off as a strip turns away; a soft highlight rides the fold.
   float facing = (.4 + .6 * abs(c)) * (c < 0. ? .6 : 1.);
-  float sheen = pow(max(0., 1. - abs(x + s * .6)), 6.) * abs(s) * .25;
+  float sheen = pow(max(0., 1. - abs(px + s * .6)), 6.) * abs(s) * .25;
   color = color * facing + sheen;
   color *= .98 + .04 * sin(time * .25 + y * 4.);
   gl_FragColor = vec4(color * alpha, alpha);
@@ -229,10 +230,9 @@ export function ProjectWarp({ title, index }: Props) {
     );
 
     const timeLocation = gl.getUniformLocation(program, "time");
-    const twistLocation = gl.getUniformLocation(program, "twist");
     const aspectLocation = gl.getUniformLocation(program, "aspect");
-    const velocityLocation = gl.getUniformLocation(program, "velocity");
-    const hoverLocation = gl.getUniformLocation(program, "hover");
+    const rectTopLocation = gl.getUniformLocation(program, "rectTop");
+    const rectHeightLocation = gl.getUniformLocation(program, "rectHeight");
     const dpr = Math.min(devicePixelRatio || 1, 1.5);
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -244,43 +244,18 @@ export function ProjectWarp({ title, index }: Props) {
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
-    let targetVelocity = 0;
-    let smoothVelocity = 0;
-    let targetHover = 0;
-    let smoothHover = 0;
-    const unsubscribe = onVelocity((value) => {
-      targetVelocity = Math.max(-14, Math.min(14, value));
-    });
-    const enter = () => {
-      targetHover = 1;
-    };
-    const leave = () => {
-      targetHover = 0;
-    };
-    canvas.addEventListener("pointerenter", enter);
-    canvas.addEventListener("pointerleave", leave);
-
     const start = performance.now();
     let frame = 0;
     const render = (now: number) => {
       frame = requestAnimationFrame(render);
-      smoothVelocity += (targetVelocity - smoothVelocity) * 0.12;
-      targetVelocity *= 0.93;
-      smoothHover += (targetHover - smoothHover) * 0.08;
       const rect = canvas.getBoundingClientRect();
-      const span = rect.height * 0.85;
-      const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
-      const ease = (n: number) => n * n * (3 - 2 * n);
-      const entering = clamp01((rect.bottom - innerHeight * 0.95) / span);
-      const leaving = clamp01((innerHeight * 0.18 - rect.top) / span);
-      const twist = leaving > 0 ? ease(leaving) : -ease(entering);
+      if (rect.bottom < 0 || rect.top > innerHeight) return;
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1f(timeLocation, (now - start) / 1000);
-      gl.uniform1f(twistLocation, twist);
       gl.uniform1f(aspectLocation, rect.width / Math.max(1, rect.height));
-      gl.uniform1f(velocityLocation, smoothVelocity);
-      gl.uniform1f(hoverLocation, smoothHover);
+      gl.uniform1f(rectTopLocation, rect.top / innerHeight);
+      gl.uniform1f(rectHeightLocation, rect.height / innerHeight);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
     frame = requestAnimationFrame(render);
@@ -288,9 +263,6 @@ export function ProjectWarp({ title, index }: Props) {
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
-      unsubscribe();
-      canvas.removeEventListener("pointerenter", enter);
-      canvas.removeEventListener("pointerleave", leave);
       gl.deleteTexture(texture);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
