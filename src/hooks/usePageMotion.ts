@@ -174,20 +174,22 @@ export function usePageMotion(ready: boolean) {
           },
         );
 
-        const drift = () => innerWidth * 0.55;
-        gsap
-          .timeline({
+        const drift = () => innerWidth * 0.22;
+        gsap.fromTo(
+          card,
+          { x: () => -drift() },
+          {
+            x: drift,
+            ease: "none",
             scrollTrigger: {
               trigger: card,
               start: "top bottom",
               end: "bottom top",
-              scrub: 0.6,
+              scrub: 1.4,
               invalidateOnRefresh: true,
             },
-          })
-          .fromTo(card, { x: drift }, { x: 0, ease: "sine.out", duration: 0.44 })
-          .to(card, { x: 0, duration: 0.12 })
-          .to(card, { x: () => -drift(), ease: "sine.in", duration: 0.44 });
+          },
+        );
 
         const sun = card.querySelector<HTMLElement>("[data-proj-sun]");
         if (sun) {
