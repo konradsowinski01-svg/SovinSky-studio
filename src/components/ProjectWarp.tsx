@@ -150,7 +150,7 @@ const palettes = [
   ["#e94f18", "#64180a", "#090706"],
 ];
 
-function makeTexture(title: string, index: number) {
+export function makeTexture(title: string, index: number) {
   const canvas = document.createElement("canvas");
   canvas.width = 1280;
   canvas.height = 720;

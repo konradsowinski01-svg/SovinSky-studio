@@ -1,0 +1,125 @@
+.page {
+  min-height: 100svh;
+  padding: clamp(110px, 16vh, 170px) var(--gutter) 120px;
+}
+
+.head {
+  display: grid;
+  grid-template-columns: 1fr minmax(240px, 30ch);
+  gap: 32px;
+  align-items: start;
+  margin-bottom: clamp(48px, 8vw, 110px);
+}
+
+.title {
+  font-family: var(--font-gothic);
+  font-weight: 700;
+  font-size: clamp(4.5rem, 17vw, 16rem);
+  line-height: 0.8;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  animation: rise 1.1s var(--ease-reveal, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.intro {
+  display: grid;
+  gap: 22px;
+  justify-self: end;
+  padding-top: 0.6em;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--muted);
+  animation: rise 1.1s 0.1s var(--ease-reveal, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.cta {
+  justify-self: start;
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 4px;
+  transition: color 0.25s;
+}
+
+.cta:hover {
+  color: var(--accent);
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(40px, 6vw, 80px) clamp(20px, 3vw, 40px);
+}
+
+.item {
+  display: grid;
+  gap: 16px;
+  animation: rise 1s var(--ease-reveal, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.shot {
+  overflow: hidden;
+  border-radius: 12px;
+  aspect-ratio: 16 / 9;
+  background: #120a07;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.item:hover .shot img {
+  transform: scale(1.03);
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 14px;
+  row-gap: 2px;
+  align-items: baseline;
+}
+
+.num {
+  grid-row: span 2;
+  font: 500 0.8rem/1 var(--font-mono);
+  color: var(--accent);
+}
+
+.name {
+  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.kind {
+  color: var(--muted);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+@media (max-width: 809.98px) {
+  .head {
+    grid-template-columns: 1fr;
+  }
+
+  .intro {
+    justify-self: start;
+    padding-top: 0;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
