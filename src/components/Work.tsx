@@ -23,11 +23,7 @@ export function Work() {
               aria-label={`${project.title}: napisz w sprawie podobnego projektu`}
             >
               <div className={styles.bend} data-proj-bend="">
-                <div
-                  className={`${styles.visual} ${styles[project.tone]}`}
-                  style={{ background: project.gradient }}
-                  data-proj-visual=""
-                >
+                <div className={`${styles.visual} ${styles[project.tone]}`} data-proj-visual="">
                   <ProjectWarp title={project.title} index={index} />
                   <div className={styles.sun} aria-hidden="true" data-proj-sun="" />
                   <div className={styles.frame} aria-hidden="true">

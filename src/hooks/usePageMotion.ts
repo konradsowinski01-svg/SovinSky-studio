@@ -203,27 +203,6 @@ export function usePageMotion(ready: boolean) {
         }
       });
 
-      const tilts = gsap.utils.toArray<HTMLElement>("[data-proj-bend]").map((el) => ({
-        rx: gsap.quickTo(el, "rotateX", { duration: 0.7, ease: "power3.out" }),
-        z: gsap.quickTo(el, "z", { duration: 0.7, ease: "power3.out" }),
-      }));
-      let tiltReset = 0;
-      const applyTilt = (v: number) => {
-        const s = gsap.utils.clamp(-14, 14, v);
-        tilts.forEach((t) => {
-          t.rx(s * -1.8);
-          t.z(-Math.abs(s) * 14);
-        });
-      };
-      cleanups.push(
-        onVelocity((v) => {
-          applyTilt(v);
-          window.clearTimeout(tiltReset);
-          tiltReset = window.setTimeout(() => applyTilt(0), 140);
-        }),
-      );
-      cleanups.push(() => window.clearTimeout(tiltReset));
-
       // --- Generic reveals ---------------------------------------------
       gsap.utils.toArray<HTMLElement>("[data-split-scroll]").forEach((el) => {
         gsap.to(el.querySelectorAll(".charInner"), {

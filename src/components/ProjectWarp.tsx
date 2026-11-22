@@ -15,48 +15,78 @@ precision highp float;
 varying vec2 uv;
 uniform sampler2D image;
 uniform float time;
-uniform float bend;
+uniform float twist;
 uniform float velocity;
 uniform float hover;
+uniform float aspect;
+
+const float DEPTH = 2.4;
 
 vec3 smear(vec2 q, vec2 dir) {
   vec3 acc = vec3(0.);
-  for (int i = 0; i < 9; i++) {
-    float t = float(i) / 8. - .5;
+  for (int i = 0; i < 11; i++) {
+    float t = float(i) / 10. - .5;
     acc += texture2D(image, clamp(q + dir * t, 0., 1.)).rgb;
   }
-  return acc / 9.;
+  return acc / 11.;
+}
+
+float roundedMask(vec2 t) {
+  vec2 p = (t - .5) * vec2(aspect, 1.);
+  vec2 b = vec2(aspect * .5, .5) - .028;
+  vec2 d = abs(p) - b;
+  float dist = length(max(d, 0.)) + min(max(d.x, d.y), 0.) - .028;
+  return 1. - smoothstep(-.002, .002, dist);
 }
 
 void main() {
-  vec2 p = uv;
-  float speed = abs(velocity);
-  float vertical = sin(p.y * 3.14159265);
-  float moving = sin(p.y * 7. + time * 1.4) * .004 * hover;
-  float pinch = bend + speed * .006;
-  float inset = max(0., pinch * vertical + moving);
-  float width = 1. - inset * 2.;
+  float y = uv.y;
+  float x = uv.x * 2. - 1.;
 
-  if (p.x < inset || p.x > 1. - inset) {
-    gl_FragColor = vec4(.019, .019, .019, 1.);
+  // Each row is a strip rotated around the vertical axis. The angle grows toward
+  // the edge the card is entering/leaving from, so the card coils like a spiral.
+  float edge = twist < 0. ? (.5 - y) : (y - .5);
+  float k = max(0., edge * 2. + .35);
+  float theta = twist * 2.4 * k * k;
+  theta += velocity * .06 * (y - .5);
+  theta += sin(y * 3.14159 + time * 1.3) * .03 * hover;
+
+  float c = cos(theta);
+  float s = sin(theta);
+  float denom = c - x * s / DEPTH;
+  if (abs(denom) < .02) {
+    gl_FragColor = vec4(0.);
+    return;
+  }
+  float u = x / denom;
+
+  // Horizontal 3D ripple while scrolling.
+  u += sin(y * 9. + time * 2.2) * velocity * .0035;
+
+  float alpha = 1. - smoothstep(.994, 1.0, abs(u));
+  if (alpha <= 0.) {
+    gl_FragColor = vec4(0.);
     return;
   }
 
-  vec2 q = vec2((p.x - inset) / width, p.y);
-  float cx = abs(q.x - .5) * 2.;
-  float arch = (1. - cx * cx) * pinch;
-  q.y += (arch - pinch * .55) * (.055 + speed * .004) * sign(velocity + 1e-4);
+  vec2 t = vec2(u * .5 + .5, y);
+  alpha *= roundedMask(t);
 
-  // RGB split grows with scroll speed and toward the card edges.
-  float split = velocity * (.0055 + .008 * cx);
-  vec2 blurDir = vec2(velocity * .0012, velocity * .013);
-  vec3 r = smear(q + vec2(split * .6, split), blurDir);
-  vec3 c = smear(q - vec2(split * .6, split), blurDir);
-  vec3 mid = smear(q, blurDir);
-  vec3 color = vec3(r.r, (mid.g + c.g) * .5, c.b);
-  color += vec3(-.06, .1, .16) * smoothstep(.0, .08, abs(split)) * (1. - mid.r);
-  color *= .98 + .04 * sin(time * .25 + q.y * 4.);
-  gl_FragColor = vec4(color, 1.);
+  float cx = abs(u);
+  float split = velocity * (.006 + .01 * cx);
+  vec2 blurDir = vec2(velocity * .016, velocity * .0015);
+  vec3 r = smear(t + vec2(split, 0.), blurDir);
+  vec3 cy = smear(t - vec2(split, 0.), blurDir);
+  vec3 mid = smear(t, blurDir);
+  vec3 color = vec3(r.r, (mid.g + cy.g) * .5, cy.b);
+  color += vec3(-.06, .1, .16) * smoothstep(0., .08, abs(split)) * (1. - mid.r);
+
+  // Light falls off as a strip turns away; a soft highlight rides the fold.
+  float facing = (.4 + .6 * abs(c)) * (c < 0. ? .6 : 1.);
+  float sheen = pow(max(0., 1. - abs(x + s * .6)), 6.) * abs(s) * .25;
+  color = color * facing + sheen;
+  color *= .98 + .04 * sin(time * .25 + y * 4.);
+  gl_FragColor = vec4(color * alpha, alpha);
 }`;
 
 const palettes = [
@@ -154,9 +184,9 @@ export function ProjectWarp({ title, index }: Props) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const gl = canvas.getContext("webgl", {
-      alpha: false,
+      alpha: true,
       antialias: true,
-      premultipliedAlpha: false,
+      premultipliedAlpha: true,
     });
     if (!gl) return;
 
@@ -199,7 +229,8 @@ export function ProjectWarp({ title, index }: Props) {
     );
 
     const timeLocation = gl.getUniformLocation(program, "time");
-    const bendLocation = gl.getUniformLocation(program, "bend");
+    const twistLocation = gl.getUniformLocation(program, "twist");
+    const aspectLocation = gl.getUniformLocation(program, "aspect");
     const velocityLocation = gl.getUniformLocation(program, "velocity");
     const hoverLocation = gl.getUniformLocation(program, "hover");
     const dpr = Math.min(devicePixelRatio || 1, 1.5);
@@ -237,11 +268,17 @@ export function ProjectWarp({ title, index }: Props) {
       targetVelocity *= 0.93;
       smoothHover += (targetHover - smoothHover) * 0.08;
       const rect = canvas.getBoundingClientRect();
-      const center = rect.top + rect.height * 0.5;
-      const distance = Math.abs(center - innerHeight * 0.5) / innerHeight;
-      const bend = Math.min(0.045, 0.012 + distance * 0.03);
+      const span = rect.height * 0.85;
+      const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+      const ease = (n: number) => n * n * (3 - 2 * n);
+      const entering = clamp01((rect.bottom - innerHeight * 0.95) / span);
+      const leaving = clamp01((innerHeight * 0.18 - rect.top) / span);
+      const twist = leaving > 0 ? ease(leaving) : -ease(entering);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1f(timeLocation, (now - start) / 1000);
-      gl.uniform1f(bendLocation, bend);
+      gl.uniform1f(twistLocation, twist);
+      gl.uniform1f(aspectLocation, rect.width / Math.max(1, rect.height));
       gl.uniform1f(velocityLocation, smoothVelocity);
       gl.uniform1f(hoverLocation, smoothHover);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
