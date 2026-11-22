@@ -20,8 +20,9 @@ uniform float rectTop;
 uniform float rectHeight;
 uniform float velocity;
 
-// Card half-width inside the canvas; the canvas bleeds sideways for the effect.
+// The canvas bleeds past the card on every side so grains can fly freely.
 const float CARD = 1. / 1.36;
+const float BLEED_Y = 1.7;
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -56,8 +57,11 @@ float roundedMask(vec2 t) {
 }
 
 void main() {
-  float y = uv.y;
+  float y = (uv.y - .5) * BLEED_Y + .5;
   float x = uv.x * 2. - 1.;
+  float cardDist = max(max(-y, y - 1.), 0.);
+  float canvasFade = smoothstep(0., .14, uv.y) * smoothstep(1., .86, uv.y)
+    * smoothstep(0., .1, uv.x) * smoothstep(1., .9, uv.x);
 
   // Effect strength comes from the row's position on screen only: it
   // materialises near the bottom, stays clean in the middle and dissolves
@@ -76,6 +80,16 @@ void main() {
   float radius = .16 + .16 * hash(fc + 3.);
   float dotMask = 1. - smoothstep(radius - .1, radius, length(ff));
   float sand = dotMask * step(hash(fc), amount * .55) * smoothstep(1.3, .95, abs(x / CARD));
+  sand *= exp(-cardDist * 6.);
+
+  // Sparse stray grains wandering around the sides while the card dissolves.
+  vec2 sp = gl_FragCoord.xy - vec2(sin(time * .6 + gl_FragCoord.y * .008) * 50., time * 38.);
+  vec2 sc = floor(sp / 7.);
+  vec2 sf = fract(sp / 7.) - .5 + (vec2(hash(sc + 5.), hash(sc + 9.)) - .5) * .5;
+  float sr = .08 + .14 * hash(sc + 13.);
+  float stray = (1. - smoothstep(sr - .06, sr, length(sf))) * step(hash(sc + 21.), top * .09);
+  stray *= exp(-cardDist * 2.);
+  sand = max(sand, stray) * canvasFade;
   // Cyberpunk glitch: smooth noise-driven sideways slides with soft edges.
   float fine = vnoise(vec2(y * 22., time * 5.)) - .5;
   float broad = vnoise(vec2(y * 6., time * 1.8 + 10.)) - .5;
@@ -294,12 +308,13 @@ export function ProjectWarp({ title, index }: Props) {
       frame = requestAnimationFrame(render);
       smoothVelocity += (targetVelocity - smoothVelocity) * 0.12;
       targetVelocity *= 0.92;
-      const rect = canvas.getBoundingClientRect();
-      if (rect.bottom < 0 || rect.top > innerHeight) return;
+      const bounds = canvas.getBoundingClientRect();
+      if (bounds.bottom < 0 || bounds.top > innerHeight) return;
+      const rect = (canvas.parentElement ?? canvas).getBoundingClientRect();
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1f(timeLocation, (now - start) / 1000);
-      gl.uniform1f(aspectLocation, (rect.width / 1.36) / Math.max(1, rect.height));
+      gl.uniform1f(aspectLocation, rect.width / Math.max(1, rect.height));
       gl.uniform1f(rectTopLocation, rect.top / innerHeight);
       gl.uniform1f(rectHeightLocation, rect.height / innerHeight);
       gl.uniform1f(velocityLocation, smoothVelocity);
