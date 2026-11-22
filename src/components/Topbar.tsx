@@ -2,9 +2,9 @@ import { site } from "../data/site";
 import styles from "./Topbar.module.css";
 
 const links = [
-  { href: "#work", label: "work" },
-  { href: "#about", label: "about" },
-  { href: "#contact", label: "contact" },
+  { href: "#work", label: "prace" },
+  { href: "#about", label: "o mnie" },
+  { href: "#contact", label: "kontakt" },
 ] as const;
 
 export function Topbar() {
