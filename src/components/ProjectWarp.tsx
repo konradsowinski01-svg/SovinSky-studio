@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { onVelocity } from "../lib/lenisStore";
 import styles from "./ProjectWarp.module.css";
 
 const VERTEX = `
@@ -16,10 +15,15 @@ varying vec2 uv;
 uniform sampler2D image;
 uniform float time;
 uniform float aspect;
-uniform float velocity;
+uniform float rectTop;
+uniform float rectHeight;
 
-// Card half-width inside the canvas; the canvas bleeds sideways for the waves.
+// Card half-width inside the canvas; the canvas bleeds sideways for the effect.
 const float CARD = 1. / 1.36;
+
+float hash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
 
 vec3 smear(vec2 q, vec2 dir) {
   vec3 acc = vec3(0.);
@@ -42,9 +46,23 @@ void main() {
   float y = uv.y;
   float x = uv.x * 2. - 1.;
 
-  float u = x / CARD;
-  u += sin(y * 7. + time * 2.4) * velocity * .014;
-  u += sin(y * 19. - time * 3.1) * velocity * .004;
+  // Effect strength comes from the row's position on screen only: it
+  // materialises near the bottom, stays clean in the middle and dissolves
+  // again near the top, regardless of scroll speed.
+  float sy = rectTop + (1. - y) * rectHeight;
+  float bottom = smoothstep(.8, 1.04, sy);
+  float top = smoothstep(.2, -.04, sy);
+  float amount = max(bottom, top);
+  float dir = bottom >= top ? 1. : -1.;
+  float a2 = amount * amount;
+
+  float band = floor(y * 34.);
+  float tick = floor(time * 9.);
+  float slice = (hash(vec2(band, tick)) - .5) * step(.45, hash(vec2(band * .7, tick + 3.)));
+
+  float u = x / CARD / (1. + .45 * a2);
+  u += slice * a2 * .55;
+  u += sin(y * 11. + time * 2.6 * dir) * a2 * .09;
 
   float alpha = 1. - smoothstep(.994, 1.0, abs(u));
   if (alpha <= 0.) {
@@ -55,14 +73,22 @@ void main() {
   vec2 t = vec2(u * .5 + .5, y);
   alpha *= roundedMask(t);
 
-  float distort = smoothstep(0., 10., abs(velocity));
-  float split = distort * (.008 + .016 * abs(u)) * sign(velocity);
-  vec2 blurDir = vec2(distort * .05, 0.);
+  float split = amount * (.03 + .045 * abs(u)) * dir;
+  vec2 blurDir = vec2(a2 * .16, 0.);
   vec3 r = smear(t + vec2(split, 0.), blurDir);
   vec3 cy = smear(t - vec2(split, 0.), blurDir);
   vec3 mid = smear(t, blurDir);
   vec3 color = vec3(r.r, (mid.g + cy.g) * .5, cy.b);
-  color += vec3(-.06, .1, .16) * smoothstep(0., .08, abs(split)) * (1. - mid.r);
+  color += vec3(-.08, .14, .22) * smoothstep(0., .03, abs(split)) * (1. - mid.r);
+
+  // Pixel dissolve with a glowing seam where the card is forming / breaking up.
+  vec2 cell = floor(t * vec2(aspect, 1.) * 70.);
+  float n = hash(cell + (dir > 0. ? 0. : 17.));
+  float d = amount * 1.25 - .12 - n;
+  alpha *= 1. - smoothstep(-.04, .04, d);
+  float seam = (1. - smoothstep(0., .1, abs(d))) * smoothstep(0., .25, amount);
+  color += vec3(1., .42, .1) * seam * .9;
+  color *= 1. + amount * .25;
   color *= .98 + .04 * sin(time * .25 + y * 4.);
   gl_FragColor = vec4(color * alpha, alpha);
 }`;
@@ -208,7 +234,8 @@ export function ProjectWarp({ title, index }: Props) {
 
     const timeLocation = gl.getUniformLocation(program, "time");
     const aspectLocation = gl.getUniformLocation(program, "aspect");
-    const velocityLocation = gl.getUniformLocation(program, "velocity");
+    const rectTopLocation = gl.getUniformLocation(program, "rectTop");
+    const rectHeightLocation = gl.getUniformLocation(program, "rectHeight");
     const dpr = Math.min(devicePixelRatio || 1, 1.5);
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -220,25 +247,18 @@ export function ProjectWarp({ title, index }: Props) {
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
-    let targetVelocity = 0;
-    let smoothVelocity = 0;
-    const unsubscribe = onVelocity((value) => {
-      targetVelocity = Math.max(-14, Math.min(14, value));
-    });
-
     const start = performance.now();
     let frame = 0;
     const render = (now: number) => {
       frame = requestAnimationFrame(render);
-      smoothVelocity += (targetVelocity - smoothVelocity) * 0.1;
-      targetVelocity *= 0.92;
       const rect = canvas.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > innerHeight) return;
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1f(timeLocation, (now - start) / 1000);
       gl.uniform1f(aspectLocation, (rect.width / 1.36) / Math.max(1, rect.height));
-      gl.uniform1f(velocityLocation, smoothVelocity);
+      gl.uniform1f(rectTopLocation, rect.top / innerHeight);
+      gl.uniform1f(rectHeightLocation, rect.height / innerHeight);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
     frame = requestAnimationFrame(render);
@@ -246,7 +266,6 @@ export function ProjectWarp({ title, index }: Props) {
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
-      unsubscribe();
       gl.deleteTexture(texture);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
