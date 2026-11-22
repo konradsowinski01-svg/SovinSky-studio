@@ -25,6 +25,17 @@ float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
 }
 
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3. - 2. * f);
+  float a = hash(i);
+  float b = hash(i + vec2(1., 0.));
+  float c = hash(i + vec2(0., 1.));
+  float d = hash(i + vec2(1., 1.));
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
 vec3 smear(vec2 q, vec2 dir) {
   vec3 acc = vec3(0.);
   for (int i = 0; i < 11; i++) {
@@ -65,17 +76,16 @@ void main() {
   float sand = dotMask * step(hash(fc), amount * .55) * smoothstep(1.3, .95, abs(x / CARD));
   vec3 sandColor = hash(fc + 41.) > .5 ? vec3(0., .95, 1.) : vec3(1., .1, .14);
 
-  // Old-TV tearing: rows jump sideways in bands, lines jitter.
-  float tick = floor(time * 12.);
-  float band = floor(y * 48.);
-  float slice = (hash(vec2(band, tick)) - .5) * step(.35, hash(vec2(band * .7, tick + 3.)));
-  float tear = step(.78, hash(vec2(floor(y * 7.), tick + 9.))) * (hash(vec2(floor(y * 7.), tick)) - .5);
-  float line = hash(vec2(floor(gl_FragCoord.y / 3.), tick)) - .5;
+  // Cyberpunk glitch: smooth noise-driven sideways slides with soft edges.
+  float fine = vnoise(vec2(y * 22., time * 5.)) - .5;
+  float broad = vnoise(vec2(y * 6., time * 1.8 + 10.)) - .5;
+  float gate = smoothstep(.42, .72, vnoise(vec2(y * 9., time * 2.4 + 3.)));
+  float slice = fine * gate;
 
   float u = x / CARD / (1. + .45 * a2);
-  u += slice * amount * .75;
-  u += tear * a2 * .9;
-  u += line * a2 * .06;
+  u += slice * amount * 1.1;
+  u += broad * a2 * .5;
+  u += sin(gl_FragCoord.y * .7 + time * 24.) * a2 * .008;
   u += sin(y * 11. + time * 2.6 * dir) * a2 * .09;
 
   float alpha = 1. - smoothstep(.994, 1.0, abs(u));
@@ -92,7 +102,7 @@ void main() {
   vec3 r = smear(t + vec2(split, 0.), blurDir);
   vec3 cy = smear(t - vec2(split, 0.), blurDir);
   vec3 mid = smear(t, blurDir);
-  vec3 color = vec3(r.r, (mid.g + cy.g) * .5, cy.b);
+  vec3 color = vec3(r.r, min((mid.g + cy.g) * .5, max(r.r, cy.b)), cy.b);
   color += vec3(-.12, .22, .34) * smoothstep(0., .03, abs(split)) * (1. - mid.r);
 
   // Sand-grain dissolve: tiny screen-space grains, tinted cyan or red, where
