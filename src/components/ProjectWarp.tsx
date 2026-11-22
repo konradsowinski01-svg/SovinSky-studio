@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { onVelocity } from "../lib/lenisStore";
 import styles from "./ProjectWarp.module.css";
 
 const VERTEX = `
@@ -17,6 +18,7 @@ uniform float time;
 uniform float aspect;
 uniform float rectTop;
 uniform float rectHeight;
+uniform float velocity;
 
 // Card half-width inside the canvas; the canvas bleeds sideways for the effect.
 const float CARD = 1. / 1.36;
@@ -97,8 +99,10 @@ void main() {
   vec2 t = vec2(u * .5 + .5, y);
   alpha *= roundedMask(t);
 
+  float speed = smoothstep(0., 12., abs(velocity));
   float split = amount * (.05 + .06 * abs(u) + abs(slice) * .12) * dir;
-  vec2 blurDir = vec2(a2 * .16, 0.);
+  split += speed * (.005 + .006 * abs(u)) * sign(velocity) * (1. - amount);
+  vec2 blurDir = vec2(a2 * .16 + speed * .006, 0.);
   vec3 r = smear(t + vec2(split, 0.), blurDir);
   vec3 cy = smear(t - vec2(split, 0.), blurDir);
   vec3 mid = smear(t, blurDir);
@@ -266,6 +270,7 @@ export function ProjectWarp({ title, index }: Props) {
     const aspectLocation = gl.getUniformLocation(program, "aspect");
     const rectTopLocation = gl.getUniformLocation(program, "rectTop");
     const rectHeightLocation = gl.getUniformLocation(program, "rectHeight");
+    const velocityLocation = gl.getUniformLocation(program, "velocity");
     const dpr = Math.min(devicePixelRatio || 1, 2);
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -277,10 +282,18 @@ export function ProjectWarp({ title, index }: Props) {
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
 
+    let targetVelocity = 0;
+    let smoothVelocity = 0;
+    const unsubscribe = onVelocity((value) => {
+      targetVelocity = Math.max(-14, Math.min(14, value));
+    });
+
     const start = performance.now();
     let frame = 0;
     const render = (now: number) => {
       frame = requestAnimationFrame(render);
+      smoothVelocity += (targetVelocity - smoothVelocity) * 0.12;
+      targetVelocity *= 0.92;
       const rect = canvas.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top > innerHeight) return;
       gl.clearColor(0, 0, 0, 0);
@@ -289,6 +302,7 @@ export function ProjectWarp({ title, index }: Props) {
       gl.uniform1f(aspectLocation, (rect.width / 1.36) / Math.max(1, rect.height));
       gl.uniform1f(rectTopLocation, rect.top / innerHeight);
       gl.uniform1f(rectHeightLocation, rect.height / innerHeight);
+      gl.uniform1f(velocityLocation, smoothVelocity);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
     frame = requestAnimationFrame(render);
@@ -296,6 +310,7 @@ export function ProjectWarp({ title, index }: Props) {
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      unsubscribe();
       gl.deleteTexture(texture);
       gl.deleteBuffer(buffer);
       gl.deleteProgram(program);
