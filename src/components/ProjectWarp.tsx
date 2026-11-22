@@ -56,24 +56,38 @@ void main() {
   float dir = bottom >= top ? 1. : -1.;
   float a2 = amount * amount;
 
-  float band = floor(y * 34.);
-  float tick = floor(time * 9.);
-  float slice = (hash(vec2(band, tick)) - .5) * step(.45, hash(vec2(band * .7, tick + 3.)));
+  // Flying sand: round grains drifting upward around the card edge zones.
+  vec2 fp = gl_FragCoord.xy - vec2(sin(gl_FragCoord.y * .05 + time) * 6., time * 70.);
+  vec2 fc = floor(fp / 3.);
+  vec2 ff = fract(fp / 3.) - .5;
+  float radius = .16 + .16 * hash(fc + 3.);
+  float dotMask = 1. - smoothstep(radius - .1, radius, length(ff));
+  float sand = dotMask * step(hash(fc), amount * .55) * smoothstep(1.3, .95, abs(x / CARD));
+  vec3 sandColor = hash(fc + 41.) > .5 ? vec3(0., .95, 1.) : vec3(1., .1, .14);
+
+  // Old-TV tearing: rows jump sideways in bands, lines jitter.
+  float tick = floor(time * 12.);
+  float band = floor(y * 48.);
+  float slice = (hash(vec2(band, tick)) - .5) * step(.35, hash(vec2(band * .7, tick + 3.)));
+  float tear = step(.78, hash(vec2(floor(y * 7.), tick + 9.))) * (hash(vec2(floor(y * 7.), tick)) - .5);
+  float line = hash(vec2(floor(gl_FragCoord.y / 3.), tick)) - .5;
 
   float u = x / CARD / (1. + .45 * a2);
-  u += slice * a2 * .55;
+  u += slice * amount * .75;
+  u += tear * a2 * .9;
+  u += line * a2 * .06;
   u += sin(y * 11. + time * 2.6 * dir) * a2 * .09;
 
   float alpha = 1. - smoothstep(.994, 1.0, abs(u));
   if (alpha <= 0.) {
-    gl_FragColor = vec4(0.);
+    gl_FragColor = vec4(sandColor * sand, sand);
     return;
   }
 
   vec2 t = vec2(u * .5 + .5, y);
   alpha *= roundedMask(t);
 
-  float split = amount * (.05 + .06 * abs(u)) * dir;
+  float split = amount * (.05 + .06 * abs(u) + abs(slice) * .12) * dir;
   vec2 blurDir = vec2(a2 * .16, 0.);
   vec3 r = smear(t + vec2(split, 0.), blurDir);
   vec3 cy = smear(t - vec2(split, 0.), blurDir);
@@ -83,17 +97,20 @@ void main() {
 
   // Sand-grain dissolve: tiny screen-space grains, tinted cyan or red, where
   // the card is forming / breaking up.
-  vec2 cell = floor(gl_FragCoord.xy / 2.);
+  vec2 cell = floor(gl_FragCoord.xy / 1.5);
   float n = hash(cell + (dir > 0. ? 0. : 17.));
   float d = amount * 1.25 - .12 - n;
   alpha *= 1. - step(0., d);
-  float seam = (1. - smoothstep(0., .14, abs(d))) * smoothstep(0., .25, amount);
+  float seam = (1. - smoothstep(0., .16, abs(d))) * smoothstep(0., .25, amount);
   vec3 grain = hash(cell + 41.) > .5 ? vec3(0., .95, 1.) : vec3(1., .08, .12);
   color = mix(color, grain, seam * .85);
-  alpha = max(alpha, seam * step(0., d) * step(.55, hash(cell + 7.)) * roundedMask(t));
+  color *= 1. - .2 * amount * step(.5, fract(gl_FragCoord.y / 3.));
   color *= 1. + amount * .25;
   color *= .98 + .04 * sin(time * .25 + y * 4.);
-  gl_FragColor = vec4(color * alpha, alpha);
+
+  float outA = max(alpha, sand);
+  vec3 outC = color * alpha + sandColor * sand * (1. - alpha);
+  gl_FragColor = vec4(outC, outA);
 }`;
 
 const palettes = [
@@ -239,7 +256,7 @@ export function ProjectWarp({ title, index }: Props) {
     const aspectLocation = gl.getUniformLocation(program, "aspect");
     const rectTopLocation = gl.getUniformLocation(program, "rectTop");
     const rectHeightLocation = gl.getUniformLocation(program, "rectHeight");
-    const dpr = Math.min(devicePixelRatio || 1, 1.5);
+    const dpr = Math.min(devicePixelRatio || 1, 2);
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       canvas.width = Math.max(1, Math.round(rect.width * dpr));
