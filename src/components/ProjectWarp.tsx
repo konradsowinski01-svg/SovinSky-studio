@@ -19,11 +19,22 @@ uniform float bend;
 uniform float velocity;
 uniform float hover;
 
+vec3 smear(vec2 q, vec2 dir) {
+  vec3 acc = vec3(0.);
+  for (int i = 0; i < 9; i++) {
+    float t = float(i) / 8. - .5;
+    acc += texture2D(image, clamp(q + dir * t, 0., 1.)).rgb;
+  }
+  return acc / 9.;
+}
+
 void main() {
   vec2 p = uv;
+  float speed = abs(velocity);
   float vertical = sin(p.y * 3.14159265);
   float moving = sin(p.y * 7. + time * 1.4) * .004 * hover;
-  float inset = max(0., bend * vertical + moving + velocity * vertical * .0015);
+  float pinch = bend + speed * .006;
+  float inset = max(0., pinch * vertical + moving);
   float width = 1. - inset * 2.;
 
   if (p.x < inset || p.x > 1. - inset) {
@@ -32,17 +43,20 @@ void main() {
   }
 
   vec2 q = vec2((p.x - inset) / width, p.y);
-  float arch = (1. - pow(abs(q.x - .5) * 2., 2.)) * bend;
-  q.y += (arch - bend * .55) * .055;
+  float cx = abs(q.x - .5) * 2.;
+  float arch = (1. - cx * cx) * pinch;
+  q.y += (arch - pinch * .55) * (.055 + speed * .004) * sign(velocity + 1e-4);
 
-  float edge = smoothstep(.26, 0., abs(q.x - .5)) * velocity * .0008;
-  vec4 red = texture2D(image, q + vec2(edge, 0.));
-  vec4 cyan = texture2D(image, q - vec2(edge, 0.));
-  vec4 color = texture2D(image, q);
-  color.r = red.r;
-  color.gb = cyan.gb;
-  color.rgb *= .98 + .04 * sin(time * .25 + q.y * 4.);
-  gl_FragColor = color;
+  // RGB split grows with scroll speed and toward the card edges.
+  float split = velocity * (.0055 + .008 * cx);
+  vec2 blurDir = vec2(velocity * .0012, velocity * .013);
+  vec3 r = smear(q + vec2(split * .6, split), blurDir);
+  vec3 c = smear(q - vec2(split * .6, split), blurDir);
+  vec3 mid = smear(q, blurDir);
+  vec3 color = vec3(r.r, (mid.g + c.g) * .5, c.b);
+  color += vec3(-.06, .1, .16) * smoothstep(.0, .08, abs(split)) * (1. - mid.r);
+  color *= .98 + .04 * sin(time * .25 + q.y * 4.);
+  gl_FragColor = vec4(color, 1.);
 }`;
 
 const palettes = [
@@ -204,7 +218,7 @@ export function ProjectWarp({ title, index }: Props) {
     let targetHover = 0;
     let smoothHover = 0;
     const unsubscribe = onVelocity((value) => {
-      targetVelocity = Math.max(-24, Math.min(24, value));
+      targetVelocity = Math.max(-14, Math.min(14, value));
     });
     const enter = () => {
       targetHover = 1;
@@ -219,8 +233,8 @@ export function ProjectWarp({ title, index }: Props) {
     let frame = 0;
     const render = (now: number) => {
       frame = requestAnimationFrame(render);
-      smoothVelocity += (targetVelocity - smoothVelocity) * 0.09;
-      targetVelocity *= 0.9;
+      smoothVelocity += (targetVelocity - smoothVelocity) * 0.12;
+      targetVelocity *= 0.93;
       smoothHover += (targetHover - smoothHover) * 0.08;
       const rect = canvas.getBoundingClientRect();
       const center = rect.top + rect.height * 0.5;
