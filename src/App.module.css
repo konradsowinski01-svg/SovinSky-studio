@@ -3,6 +3,23 @@
   background: var(--black);
 }
 
+.burnOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: auto;
+  background: #050505;
+}
+
+.burnSheet {
+  min-height: 100dvh;
+  background: #050505;
+  pointer-events: none;
+  will-change: transform;
+}
+
 .hidden {
   visibility: hidden;
   pointer-events: none;

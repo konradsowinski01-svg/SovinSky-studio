@@ -1,4 +1,4 @@
-import { toCanvas } from "html-to-image";
+import type { Route } from "./router";
 
 const VERTEX = `
 attribute vec2 position;
@@ -8,14 +8,13 @@ void main() {
   gl_Position = vec4(position, 0., 1.);
 }`;
 
-const FRAGMENT = `
+const SHARED = `
 precision highp float;
 varying vec2 uv;
 uniform float progress;
 uniform float aspect;
 uniform float time;
 uniform vec2 origin;
-uniform sampler2D u_page;
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -43,54 +42,73 @@ float fbm(vec2 p) {
   return v;
 }
 
-vec3 flame(float d, float w) {
-  vec3 hot = vec3(1., .86, .45);
-  vec3 orange = vec3(1., .38, .02);
-  vec3 ember = vec3(.32, .04, .0);
-  vec3 c = mix(hot, orange, smoothstep(0., w * .25, d));
-  c = mix(c, ember, smoothstep(w * .25, w * .7, d));
-  return mix(c, vec3(.02, .015, .012), smoothstep(w * .7, w, d));
-}
-
-void main() {
+float field() {
   vec2 p = vec2(uv.x * aspect, uv.y);
   vec2 o = vec2(origin.x * aspect, origin.y);
-
   float maxDist = length(max(o, vec2(aspect, 1.) - o)) + .001;
   float dist = length(p - o) / maxDist;
   float n = fbm(p * 2.8 + time * .04) * .22;
-  float field = dist + n;
+  return dist + n - progress * 1.28;
+}
+`;
 
-  float th = progress * 1.28;
-  float d = field - th;
+// White = keep overlay, black = reveal page underneath (CSS mask alpha/luminance).
+const MASK_FRAGMENT =
+  SHARED +
+  `
+void main() {
+  float d = field();
   float w = .11;
-  float flicker = .92 + .08 * noise(p * 36. + time * 4.);
+  float keep = smoothstep(-w * .12, w * .08, d);
+  gl_FragColor = vec4(keep, keep, keep, keep);
+}
+`;
 
-  // Inside the wave — clear, next page already underneath.
-  if (d < 0.) {
+const FLAME_FRAGMENT =
+  SHARED +
+  `
+vec3 flameCol(float d, float w) {
+  vec3 hot = vec3(1., .86, .45);
+  vec3 orange = vec3(1., .38, .02);
+  vec3 ember = vec3(.32, .04, .0);
+  float ad = abs(d);
+  vec3 c = mix(hot, orange, smoothstep(0., w * .25, ad));
+  c = mix(c, ember, smoothstep(w * .25, w * .7, ad));
+  return mix(c, vec3(.02, .015, .012), smoothstep(w * .7, w, ad));
+}
+
+void main() {
+  float d = field();
+  float w = .11;
+  float flicker = .92 + .08 * noise(vec2(uv.x * aspect, uv.y) * 36. + time * 4.);
+
+  if (abs(d) > w * 1.15) {
     gl_FragColor = vec4(0.);
     return;
   }
 
-  vec3 page = texture2D(u_page, uv).rgb;
-  page *= mix(.12, 1., smoothstep(0., w * 1.6, d));
-
-  vec3 fire = flame(d, w) * flicker;
-  vec3 color = mix(fire, page, smoothstep(0., w * .95, d));
-
+  float band = 1. - smoothstep(0., w, abs(d));
+  vec3 color = flameCol(d, w) * flicker;
   float spark = step(.988, hash(floor(gl_FragCoord.xy / 2.) + floor(time * 16.)));
-  color += vec3(1., .55, .18) * spark * (1. - smoothstep(0., w * .55, abs(d)));
+  color += vec3(1., .55, .18) * spark * band;
 
-  float alpha = 1.;
-  if (d < w * .15) {
-    alpha = smoothstep(0., w * .15, d);
-    color *= alpha;
-  }
+  float alpha = band;
+  if (d < 0.) alpha *= smoothstep(-w, -w * .15, d);
+  gl_FragColor = vec4(color * alpha, alpha);
+}
+`;
 
-  gl_FragColor = vec4(color, alpha);
-}`;
+export type BurnHooks = {
+  prepare: (from: Route) => Promise<HTMLElement>;
+  finish: () => void;
+};
 
+let hooks: BurnHooks | null = null;
 let running = false;
+
+export function registerBurnHooks(next: BurnHooks | null) {
+  hooks = next;
+}
 
 function compile(gl: WebGLRenderingContext, type: number, source: string) {
   const shader = gl.createShader(type);
@@ -100,122 +118,25 @@ function compile(gl: WebGLRenderingContext, type: number, source: string) {
   return gl.getShaderParameter(shader, gl.COMPILE_STATUS) ? shader : null;
 }
 
-const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
-
-function play(draw: (progress: number, time: number) => void, duration: number) {
-  return new Promise<void>((resolve) => {
-    const start = performance.now();
-    const step = (now: number) => {
-      const t = Math.min(1, (now - start) / duration);
-      draw(easeOutCubic(t), now / 1000);
-      if (t < 1) requestAnimationFrame(step);
-      else resolve();
-    };
-    requestAnimationFrame(step);
-  });
-}
-
-const nextFrames = () =>
-  new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-
-/** Stamp live canvases (hero wave etc.) onto the DOM snapshot at viewport coords. */
-function compositeCanvases(target: HTMLCanvasElement, root: HTMLElement) {
-  const ctx = target.getContext("2d");
-  if (!ctx) return;
-  const scaleX = target.width / innerWidth;
-  const scaleY = target.height / innerHeight;
-  root.querySelectorAll("canvas").forEach((live) => {
-    const rect = live.getBoundingClientRect();
-    if (rect.bottom < 0 || rect.top > innerHeight || rect.right < 0 || rect.left > innerWidth) {
-      return;
-    }
-    try {
-      ctx.drawImage(
-        live,
-        rect.left * scaleX,
-        rect.top * scaleY,
-        rect.width * scaleX,
-        rect.height * scaleY,
-      );
-    } catch {
-      // WebGL read can fail — DOM chrome still burns correctly.
-    }
-  });
-}
-
-/** Snapshot the live viewport so the burn eats the real page, not a black sheet. */
-async function captureViewport(): Promise<HTMLCanvasElement> {
-  const node = document.getElementById("top");
-  if (!node) throw new Error("missing #top");
-
-  const ratio = Math.min(devicePixelRatio || 1, 1.5);
-  const pageCanvas = await toCanvas(node, {
-    pixelRatio: ratio,
-    width: innerWidth,
-    height: innerHeight,
-    canvasWidth: Math.round(innerWidth * ratio),
-    canvasHeight: Math.round(innerHeight * ratio),
-    backgroundColor: "#050505",
-    style: {
-      width: `${innerWidth}px`,
-      height: `${innerHeight}px`,
-      overflow: "hidden",
-      transform: `translate(${-scrollX}px, ${-scrollY}px)`,
-      background: "#050505",
-    },
-  });
-
-  compositeCanvases(pageCanvas, node);
-  return pageCanvas;
-}
-
-/** Freeze the current page, mount the next route under it, burn a wave from the click. */
-export async function burnTo(hash: string, origin = { x: innerWidth / 2, y: innerHeight / 2 }) {
-  if (running) return;
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    window.location.hash = hash;
-    return;
-  }
-  running = true;
-
-  let pageCanvas: HTMLCanvasElement;
-  try {
-    pageCanvas = await captureViewport();
-  } catch {
-    running = false;
-    window.location.hash = hash;
-    return;
-  }
-
-  const canvas = document.createElement("canvas");
-  canvas.dataset.burnOverlay = "";
-  Object.assign(canvas.style, {
-    position: "fixed",
-    inset: "0",
-    width: "100vw",
-    height: "100vh",
-    zIndex: "200",
-    pointerEvents: "auto",
-  });
-  document.body.appendChild(canvas);
-  const dpr = Math.min(devicePixelRatio || 1, 1.5);
-  canvas.width = Math.round(innerWidth * dpr);
-  canvas.height = Math.round(innerHeight * dpr);
-
-  const gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: true });
-  const vertex = gl && compile(gl, gl.VERTEX_SHADER, VERTEX);
-  const fragment = gl && compile(gl, gl.FRAGMENT_SHADER, FRAGMENT);
-  const program = gl && vertex && fragment ? gl.createProgram() : null;
-  if (!gl || !program || !vertex || !fragment) {
-    canvas.remove();
-    running = false;
-    window.location.hash = hash;
-    return;
-  }
+function createProgram(gl: WebGLRenderingContext, fragmentSource: string) {
+  const vertex = compile(gl, gl.VERTEX_SHADER, VERTEX);
+  const fragment = compile(gl, gl.FRAGMENT_SHADER, fragmentSource);
+  if (!vertex || !fragment) return null;
+  const program = gl.createProgram();
+  if (!program) return null;
   gl.attachShader(program, vertex);
   gl.attachShader(program, fragment);
   gl.linkProgram(program);
-  gl.useProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    gl.deleteProgram(program);
+    gl.deleteShader(vertex);
+    gl.deleteShader(fragment);
+    return null;
+  }
+  return { program, vertex, fragment };
+}
+
+function bindQuad(gl: WebGLRenderingContext, program: WebGLProgram) {
   const buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(
@@ -226,47 +147,165 @@ export async function burnTo(hash: string, origin = { x: innerWidth / 2, y: inne
   const position = gl.getAttribLocation(program, "position");
   gl.enableVertexAttribArray(position);
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+  return buffer;
+}
+
+function wire(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram,
+  canvas: HTMLCanvasElement,
+  origin: { x: number; y: number },
+) {
+  gl.useProgram(program);
   gl.viewport(0, 0, canvas.width, canvas.height);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-
-  const texture = gl.createTexture();
-  gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, pageCanvas);
-
   const loc = (name: string) => gl.getUniformLocation(program, name);
   gl.uniform1f(loc("aspect"), innerWidth / innerHeight);
   gl.uniform2f(loc("origin"), origin.x / innerWidth, 1 - origin.y / innerHeight);
-  gl.uniform1i(loc("u_page"), 0);
-  const progressLoc = loc("progress");
-  const timeLoc = loc("time");
+  return loc;
+}
 
-  const draw = (progress: number, time: number) => {
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.uniform1f(progressLoc, progress);
-    gl.uniform1f(timeLoc, time);
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-  };
+function draw(
+  gl: WebGLRenderingContext,
+  program: WebGLProgram,
+  loc: (name: string) => WebGLUniformLocation | null,
+  progress: number,
+  time: number,
+) {
+  gl.useProgram(program);
+  gl.clearColor(0, 0, 0, 0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform1f(loc("progress"), progress);
+  gl.uniform1f(loc("time"), time);
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
 
-  // Frozen current page on top → swap route under it → wave eats the freeze.
-  draw(0, performance.now() / 1000);
-  await nextFrames();
+const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+
+const nextFrames = () =>
+  new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+function readRouteFromHash(hash = window.location.hash): Route {
+  return hash.startsWith("#/portfolio") ? "portfolio" : "home";
+}
+
+function applyMask(overlay: HTMLElement, dataUrl: string) {
+  overlay.style.setProperty("-webkit-mask-image", `url(${dataUrl})`);
+  overlay.style.setProperty("mask-image", `url(${dataUrl})`);
+  overlay.style.setProperty("-webkit-mask-size", "100% 100%");
+  overlay.style.setProperty("mask-size", "100% 100%");
+  overlay.style.setProperty("-webkit-mask-repeat", "no-repeat");
+  overlay.style.setProperty("mask-repeat", "no-repeat");
+}
+
+function clearMask(overlay: HTMLElement) {
+  overlay.style.removeProperty("-webkit-mask-image");
+  overlay.style.removeProperty("mask-image");
+  overlay.style.removeProperty("-webkit-mask-size");
+  overlay.style.removeProperty("mask-size");
+  overlay.style.removeProperty("-webkit-mask-repeat");
+  overlay.style.removeProperty("mask-repeat");
+}
+
+/**
+ * Live React overlay of the leaving page, destination under it, CSS-masked
+ * flame wave from the click. (WebGL mix-blend destination-out is unreliable.)
+ */
+export async function burnTo(hash: string, origin = { x: innerWidth / 2, y: innerHeight / 2 }) {
+  if (running) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    window.location.hash = hash;
+    return;
+  }
+  if (!hooks) {
+    window.location.hash = hash;
+    return;
+  }
+
+  running = true;
+  const from = readRouteFromHash();
+
+  let overlay: HTMLElement;
+  try {
+    overlay = await hooks.prepare(from);
+  } catch {
+    running = false;
+    window.location.hash = hash;
+    return;
+  }
+
   window.location.hash = hash;
   await nextFrames();
-  await play(draw, 2400);
 
-  gl.deleteTexture(texture);
-  gl.deleteBuffer(buffer);
-  gl.deleteProgram(program);
-  gl.deleteShader(vertex);
-  gl.deleteShader(fragment);
-  canvas.remove();
+  // Low-res mask — CSS stretches it; keeps toDataURL cheap enough for RAF.
+  const maskCanvas = document.createElement("canvas");
+  const maskW = 480;
+  maskCanvas.width = maskW;
+  maskCanvas.height = Math.max(1, Math.round((maskW * innerHeight) / innerWidth));
+
+  const flameCanvas = document.createElement("canvas");
+  const dpr = Math.min(devicePixelRatio || 1, 1.5);
+  flameCanvas.width = Math.round(innerWidth * dpr);
+  flameCanvas.height = Math.round(innerHeight * dpr);
+  Object.assign(flameCanvas.style, {
+    position: "fixed",
+    inset: "0",
+    width: "100vw",
+    height: "100vh",
+    zIndex: "201",
+    pointerEvents: "none",
+  });
+  document.body.appendChild(flameCanvas);
+
+  const maskGl = maskCanvas.getContext("webgl", {
+    alpha: true,
+    premultipliedAlpha: true,
+    preserveDrawingBuffer: true,
+  });
+  const flameGl = flameCanvas.getContext("webgl", { alpha: true, premultipliedAlpha: true });
+  const maskProg = maskGl ? createProgram(maskGl, MASK_FRAGMENT) : null;
+  const flameProg = flameGl ? createProgram(flameGl, FLAME_FRAGMENT) : null;
+
+  if (!maskGl || !flameGl || !maskProg || !flameProg) {
+    flameCanvas.remove();
+    clearMask(overlay);
+    hooks.finish();
+    running = false;
+    return;
+  }
+
+  const maskBuf = bindQuad(maskGl, maskProg.program);
+  const flameBuf = bindQuad(flameGl, flameProg.program);
+  const maskLoc = wire(maskGl, maskProg.program, maskCanvas, origin);
+  const flameLoc = wire(flameGl, flameProg.program, flameCanvas, origin);
+
+  const duration = 2200;
+  const start = performance.now();
+  await new Promise<void>((resolve) => {
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const progress = easeOutCubic(t);
+      const time = now / 1000;
+      draw(maskGl, maskProg.program, maskLoc, progress, time);
+      applyMask(overlay, maskCanvas.toDataURL("image/png"));
+      draw(flameGl, flameProg.program, flameLoc, progress, time);
+      if (t < 1) requestAnimationFrame(step);
+      else resolve();
+    };
+    requestAnimationFrame(step);
+  });
+
+  maskGl.deleteBuffer(maskBuf);
+  flameGl.deleteBuffer(flameBuf);
+  maskGl.deleteProgram(maskProg.program);
+  flameGl.deleteProgram(flameProg.program);
+  maskGl.deleteShader(maskProg.vertex);
+  maskGl.deleteShader(maskProg.fragment);
+  flameGl.deleteShader(flameProg.vertex);
+  flameGl.deleteShader(flameProg.fragment);
+  flameCanvas.remove();
+  clearMask(overlay);
+  hooks.finish();
   running = false;
 }
