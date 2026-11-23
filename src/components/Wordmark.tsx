@@ -31,16 +31,16 @@ export function Wordmark({ widthRatio = 1.48 }: Props) {
     return () => window.removeEventListener("resize", fit);
   }, [widthRatio]);
 
-  const maskStyle = {
-    WebkitMaskImage: maskImage,
-    maskImage,
-  } as const;
-
   return (
     <div ref={wrapRef} className={styles.wrap} aria-hidden="true" data-wordmark="">
-      {/* Cheap thin contour: slightly larger solid ink, no filters */}
-      <span className={`${styles.part} ${styles.outline}`} style={maskStyle} />
-      <span className={`${styles.part} ${styles.ink}`} style={maskStyle} data-wm-letter={0} />
+      <span
+        className={`${styles.part} ${styles.ink}`}
+        style={{
+          WebkitMaskImage: maskImage,
+          maskImage,
+        }}
+        data-wm-letter={0}
+      />
     </div>
   );
 }

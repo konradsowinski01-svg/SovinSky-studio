@@ -30,16 +30,7 @@
   mask-position: center;
 }
 
-/* Thin outline via tiny scale — avoids expensive drop-shadow filters */
-.outline {
-  z-index: 0;
-  background: var(--ink-bottom);
-  transform: scale(1.004);
-  transform-origin: center center;
-}
-
 .ink {
-  z-index: 1;
   background-image: linear-gradient(
     180deg,
     #ff9a4a 0%,
