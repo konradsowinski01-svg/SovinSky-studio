@@ -1,3 +1,5 @@
+import { toCanvas } from "html-to-image";
+
 const VERTEX = `
 attribute vec2 position;
 varying vec2 uv;
@@ -10,10 +12,10 @@ const FRAGMENT = `
 precision highp float;
 varying vec2 uv;
 uniform float progress;
-uniform float phase;
 uniform float aspect;
 uniform float time;
 uniform vec2 origin;
+uniform sampler2D u_page;
 
 float hash(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -53,42 +55,39 @@ vec3 flame(float d, float w) {
 void main() {
   vec2 p = vec2(uv.x * aspect, uv.y);
   vec2 o = vec2(origin.x * aspect, origin.y);
-  float spread = length(p - o) / (aspect + 1.);
-  float n = fbm(p * 3.2 + time * .05) * .55 + spread * .75;
 
-  float th = progress * 1.6 - .12;
-  float w = .09;
-  float flicker = .9 + .1 * noise(p * 40. + time * 6.);
+  float maxDist = length(max(o, vec2(aspect, 1.) - o)) + .001;
+  float dist = length(p - o) / maxDist;
+  float n = fbm(p * 2.8 + time * .04) * .22;
+  float field = dist + n;
 
-  vec3 color;
-  float alpha;
-  if (phase < .5) {
-    // The page burns into ash, edge glowing orange.
-    float d = th - n;
-    if (d < -.05) {
-      gl_FragColor = vec4(0.);
-      return;
-    }
-    if (d < 0.) {
-      float scorch = 1. - (-d / .05);
-      gl_FragColor = vec4(vec3(.12, .04, .0) * scorch * .6, scorch * .6);
-      return;
-    }
-    color = flame(d, w) * flicker;
-    alpha = 1.;
-  } else {
-    // The ash burns away and reveals the new page.
-    float d = n - th;
-    if (d < 0.) {
-      gl_FragColor = vec4(0.);
-      return;
-    }
-    color = flame(d, w) * flicker;
-    alpha = 1.;
+  float th = progress * 1.28;
+  float d = field - th;
+  float w = .11;
+  float flicker = .92 + .08 * noise(p * 36. + time * 4.);
+
+  // Inside the wave — clear, next page already underneath.
+  if (d < 0.) {
+    gl_FragColor = vec4(0.);
+    return;
   }
-  float spark = step(.985, hash(floor(gl_FragCoord.xy / 2.) + floor(time * 20.)));
-  color += vec3(1., .6, .2) * spark * (1. - smoothstep(0., w * .5, abs(th - n)));
-  gl_FragColor = vec4(color * alpha, alpha);
+
+  vec3 page = texture2D(u_page, uv).rgb;
+  page *= mix(.12, 1., smoothstep(0., w * 1.6, d));
+
+  vec3 fire = flame(d, w) * flicker;
+  vec3 color = mix(fire, page, smoothstep(0., w * .95, d));
+
+  float spark = step(.988, hash(floor(gl_FragCoord.xy / 2.) + floor(time * 16.)));
+  color += vec3(1., .55, .18) * spark * (1. - smoothstep(0., w * .55, abs(d)));
+
+  float alpha = 1.;
+  if (d < w * .15) {
+    alpha = smoothstep(0., w * .15, d);
+    color *= alpha;
+  }
+
+  gl_FragColor = vec4(color, alpha);
 }`;
 
 let running = false;
@@ -101,18 +100,14 @@ function compile(gl: WebGLRenderingContext, type: number, source: string) {
   return gl.getShaderParameter(shader, gl.COMPILE_STATUS) ? shader : null;
 }
 
-const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
-function play(
-  draw: (progress: number, phase: number, time: number) => void,
-  phase: number,
-  duration: number,
-) {
+function play(draw: (progress: number, time: number) => void, duration: number) {
   return new Promise<void>((resolve) => {
     const start = performance.now();
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
-      draw(easeInOut(t), phase, now / 1000);
+      draw(easeOutCubic(t), now / 1000);
       if (t < 1) requestAnimationFrame(step);
       else resolve();
     };
@@ -123,7 +118,58 @@ function play(
 const nextFrames = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
-/** Burns the current page away, switches the hash, then burns the ash off the new page. */
+/** Stamp live canvases (hero wave etc.) onto the DOM snapshot at viewport coords. */
+function compositeCanvases(target: HTMLCanvasElement, root: HTMLElement) {
+  const ctx = target.getContext("2d");
+  if (!ctx) return;
+  const scaleX = target.width / innerWidth;
+  const scaleY = target.height / innerHeight;
+  root.querySelectorAll("canvas").forEach((live) => {
+    const rect = live.getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > innerHeight || rect.right < 0 || rect.left > innerWidth) {
+      return;
+    }
+    try {
+      ctx.drawImage(
+        live,
+        rect.left * scaleX,
+        rect.top * scaleY,
+        rect.width * scaleX,
+        rect.height * scaleY,
+      );
+    } catch {
+      // WebGL read can fail — DOM chrome still burns correctly.
+    }
+  });
+}
+
+/** Snapshot the live viewport so the burn eats the real page, not a black sheet. */
+async function captureViewport(): Promise<HTMLCanvasElement> {
+  const node = document.getElementById("top");
+  if (!node) throw new Error("missing #top");
+
+  const ratio = Math.min(devicePixelRatio || 1, 1.5);
+  const pageCanvas = await toCanvas(node, {
+    pixelRatio: ratio,
+    width: innerWidth,
+    height: innerHeight,
+    canvasWidth: Math.round(innerWidth * ratio),
+    canvasHeight: Math.round(innerHeight * ratio),
+    backgroundColor: "#050505",
+    style: {
+      width: `${innerWidth}px`,
+      height: `${innerHeight}px`,
+      overflow: "hidden",
+      transform: `translate(${-scrollX}px, ${-scrollY}px)`,
+      background: "#050505",
+    },
+  });
+
+  compositeCanvases(pageCanvas, node);
+  return pageCanvas;
+}
+
+/** Freeze the current page, mount the next route under it, burn a wave from the click. */
 export async function burnTo(hash: string, origin = { x: innerWidth / 2, y: innerHeight / 2 }) {
   if (running) return;
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -132,7 +178,17 @@ export async function burnTo(hash: string, origin = { x: innerWidth / 2, y: inne
   }
   running = true;
 
+  let pageCanvas: HTMLCanvasElement;
+  try {
+    pageCanvas = await captureViewport();
+  } catch {
+    running = false;
+    window.location.hash = hash;
+    return;
+  }
+
   const canvas = document.createElement("canvas");
+  canvas.dataset.burnOverlay = "";
   Object.assign(canvas.style, {
     position: "fixed",
     inset: "0",
@@ -171,28 +227,42 @@ export async function burnTo(hash: string, origin = { x: innerWidth / 2, y: inne
   gl.enableVertexAttribArray(position);
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
   gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+  const texture = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, pageCanvas);
 
   const loc = (name: string) => gl.getUniformLocation(program, name);
   gl.uniform1f(loc("aspect"), innerWidth / innerHeight);
   gl.uniform2f(loc("origin"), origin.x / innerWidth, 1 - origin.y / innerHeight);
+  gl.uniform1i(loc("u_page"), 0);
   const progressLoc = loc("progress");
-  const phaseLoc = loc("phase");
   const timeLoc = loc("time");
 
-  const draw = (progress: number, phase: number, time: number) => {
+  const draw = (progress: number, time: number) => {
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform1f(progressLoc, progress);
-    gl.uniform1f(phaseLoc, phase);
     gl.uniform1f(timeLoc, time);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   };
 
-  await play(draw, 0, 1100);
+  // Frozen current page on top → swap route under it → wave eats the freeze.
+  draw(0, performance.now() / 1000);
+  await nextFrames();
   window.location.hash = hash;
   await nextFrames();
-  await play(draw, 1, 1000);
+  await play(draw, 2400);
 
+  gl.deleteTexture(texture);
   gl.deleteBuffer(buffer);
   gl.deleteProgram(program);
   gl.deleteShader(vertex);

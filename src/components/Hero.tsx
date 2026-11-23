@@ -16,9 +16,21 @@ export function Hero() {
         <div className={styles.fade} aria-hidden="true" data-hero-fade="" />
         <div className={styles.copy} data-hero-copy="">
           <h1 className={styles.title}>
-            <span className="sr-only">{site.brand} — strony internetowe i aplikacje</span>
-            <TextSplit text={site.tagline} className={styles.titleSplit} data-split-hero="" />
+            <span className="sr-only">
+              {site.brand} — {site.tagline.join(" ")}
+            </span>
+            {site.tagline.map((line) => (
+              <TextSplit
+                key={line}
+                text={line}
+                className={styles.titleSplit}
+                data-split-hero=""
+              />
+            ))}
           </h1>
+          <p className={styles.lead} data-hero-lead="">
+            {site.lead}
+          </p>
           <div className={styles.meta} data-hero-meta="">
             <p>{clock}</p>
             <p className={styles.status}>

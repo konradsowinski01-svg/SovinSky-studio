@@ -55,16 +55,27 @@
 }
 
 .title {
-  max-width: 13.5em;
-  font-size: clamp(1.6rem, 3.1vw, 2.4rem);
+  display: grid;
+  gap: 0.18em;
+  max-width: 16em;
+  font-size: clamp(2rem, 4.2vw, 3.35rem);
   font-weight: 300;
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.08;
 }
 
 .titleSplit {
+  display: block;
   font: inherit;
   letter-spacing: inherit;
+}
+
+.lead {
+  margin-top: 14px;
+  max-width: 28em;
+  font: 400 0.95rem/1.45 var(--font-mono);
+  letter-spacing: 0.01em;
+  color: rgb(255 255 255 / 0.62);
 }
 
 .meta {
@@ -86,19 +97,20 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #fff;
+  background: #32e05a;
+  box-shadow: 0 0 10px rgb(50 224 90 / 0.75);
   animation: pulse 2s ease-out infinite;
 }
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgb(255 255 255 / 0.55);
+    box-shadow: 0 0 0 0 rgb(50 224 90 / 0.55);
   }
   70% {
-    box-shadow: 0 0 0 12px rgb(255 255 255 / 0);
+    box-shadow: 0 0 0 12px rgb(50 224 90 / 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgb(255 255 255 / 0);
+    box-shadow: 0 0 0 0 rgb(50 224 90 / 0);
   }
 }
 

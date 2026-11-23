@@ -2,7 +2,8 @@
 export const site = {
   brand: "SovinSky Studio",
   brandShort: "SovinSky",
-  tagline: "Projektuję i buduję strony oraz aplikacje.",
+  tagline: ["Projektuję. Buduję. Wdrażam.", "Aplikacje iOS, Android, strony WWW."],
+  lead: "Od szkicu do gotowego produktu, end to end.",
   location: "Polska",
   status: "Otwarty na nowe projekty.",
   email: "kontakt@sovinsky.studio",

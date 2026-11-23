@@ -108,6 +108,19 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 75%, transparent);
+  background: #32e05a;
+  box-shadow: 0 0 12px rgb(50 224 90 / 0.7);
+  animation: readyPulse 2s ease-out infinite;
+}
+
+@keyframes readyPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(50 224 90 / 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgb(50 224 90 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(50 224 90 / 0);
+  }
 }

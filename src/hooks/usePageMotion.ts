@@ -35,7 +35,7 @@ export function usePageMotion(ready: boolean) {
         delay: 0.45,
       });
       gsap.fromTo(
-        "[data-hero-meta] > *",
+        "[data-hero-lead], [data-hero-meta] > *",
         { opacity: 0, y: 14 },
         { opacity: 1, y: 0, duration: 0.8, ease, stagger: 0.1, delay: 0.8 },
       );
