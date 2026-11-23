@@ -12,7 +12,7 @@ export function Hero() {
     <section id="hero" className={styles.hero} aria-label="Wstęp">
       <div className={styles.inner} data-hero-inner="">
         <HeroWave className={styles.wave} />
-        <Wordmark text={site.brandShort.toLowerCase()} />
+        <Wordmark widthRatio={1.48} />
         <div className={styles.fade} aria-hidden="true" data-hero-fade="" />
         <div className={styles.copy} data-hero-copy="">
           <h1 className={styles.title}>

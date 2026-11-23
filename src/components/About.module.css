@@ -24,8 +24,9 @@
 }
 
 .brandInline {
-  font-family: var(--font-gothic);
-  font-weight: 700;
+  font-family: var(--font-brand);
+  font-weight: 400;
+  font-synthesis: none;
   color: var(--accent);
   letter-spacing: 0;
 }

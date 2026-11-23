@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import { site } from "../data/site";
+import { logoParts } from "../data/logo";
 import styles from "./Preloader.module.css";
+
+const mark = logoParts[0];
+const markMask = `image-set(url("${mark.src}") 1x, url("${mark.src2x}") 2x)`;
+
 
 type Props = {
   onDone: () => void;
@@ -39,14 +43,23 @@ export function Preloader({ onDone }: Props) {
     <div className={`${styles.root} ${leaving ? styles.leaving : ""}`} aria-busy="true" aria-live="polite">
       <div className={styles.sheet} />
       <div className={styles.panel}>
-        <div className={styles.mark} aria-hidden="true">
-          <span className={styles.markGhost}>{site.brandShort}</span>
+        <div
+          className={styles.mark}
+          aria-hidden="true"
+          style={{ aspectRatio: `${mark.width} / ${mark.height}` }}
+        >
+          <span
+            className={styles.markGhost}
+            style={{ WebkitMaskImage: markMask, maskImage: markMask }}
+          />
           <span
             className={styles.markFill}
-            style={{ clipPath: `inset(0 ${100 - progress}% 0 0)` }}
-          >
-            {site.brandShort}
-          </span>
+            style={{
+              clipPath: `inset(0 ${100 - progress}% 0 0)`,
+              WebkitMaskImage: markMask,
+              maskImage: markMask,
+            }}
+          />
         </div>
         <div className={styles.labels}>
           <span>LOAD</span>

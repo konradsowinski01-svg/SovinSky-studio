@@ -17,26 +17,15 @@ export function usePageMotion(ready: boolean) {
     const ctx = gsap.context(() => {
       const ease = "power3.out";
 
-      // --- Hero intro: each letter exists in both blend layers, animate pairs
+      // --- Hero intro: animate the whole mark once (cheap on a huge masked layer)
       const wordmark = document.querySelector<HTMLElement>("[data-wordmark]");
-      const letterCount = wordmark
-        ? wordmark.querySelectorAll("[data-wm-letter]").length / 2
-        : 0;
-      const pairs = Array.from({ length: letterCount }, (_, i) =>
-        gsap.utils.toArray<HTMLElement>(`[data-wm-letter="${i}"]`),
-      );
-      pairs.forEach((pair, i) => {
+      if (wordmark) {
         gsap.fromTo(
-          pair,
-          { yPercent: 105 },
-          {
-            yPercent: 0,
-            duration: 1.6,
-            ease: "expo.out",
-            delay: 0.1 + Math.abs(i - (letterCount - 1) / 2) * 0.06,
-          },
+          wordmark,
+          { yPercent: 18, opacity: 0 },
+          { yPercent: 0, opacity: 0.2, duration: 1.6, ease: "expo.out", delay: 0.1 },
         );
-      });
+      }
 
       gsap.to("[data-split-hero] .charInner", {
         y: "0%",
@@ -75,22 +64,19 @@ export function usePageMotion(ready: boolean) {
         cleanups.push(() => window.removeEventListener("scroll", onScroll));
       }
 
-      // --- Pointer: letters lean slightly toward the cursor, pairs in sync
-      const movers = pairs.map((pair, i) => ({
-        x: gsap.quickTo(pair, "x", { duration: 1.4, ease: "power3.out" }),
-        y: gsap.quickTo(pair, "y", { duration: 1.4, ease: "power3.out" }),
-        depth: 6 + (i % 3) * 4,
-      }));
-      const onMove = (e: PointerEvent) => {
-        const nx = e.clientX / window.innerWidth - 0.5;
-        const ny = e.clientY / window.innerHeight - 0.5;
-        movers.forEach((m) => {
-          m.x(nx * m.depth);
-          m.y(ny * m.depth * 0.6);
-        });
-      };
-      window.addEventListener("pointermove", onMove, { passive: true });
-      cleanups.push(() => window.removeEventListener("pointermove", onMove));
+      // --- Pointer: whole mark leans lightly (one transform, not per-layer)
+      if (wordmark) {
+        const moveX = gsap.quickTo(wordmark, "x", { duration: 1.4, ease: "power3.out" });
+        const moveY = gsap.quickTo(wordmark, "y", { duration: 1.4, ease: "power3.out" });
+        const onMove = (e: PointerEvent) => {
+          const nx = e.clientX / window.innerWidth - 0.5;
+          const ny = e.clientY / window.innerHeight - 0.5;
+          moveX(nx * 10);
+          moveY(ny * 6);
+        };
+        window.addEventListener("pointermove", onMove, { passive: true });
+        cleanups.push(() => window.removeEventListener("pointermove", onMove));
+      }
 
       // --- Liquid headings: melted in, settle when visible, melt on speed --
       gsap.utils.toArray<HTMLElement>("[data-liquid]").forEach((heading) => {

@@ -17,23 +17,35 @@
 
 .logo {
   display: inline-flex;
-  flex-direction: column;
-  font-family: var(--font-gothic);
-  font-weight: 700;
-  line-height: 0.78;
+  align-items: stretch;
+  height: 2.05rem;
   color: var(--ink);
   transition: color 0.25s;
 }
 
-.logoMark {
-  font-size: 1.55rem;
-  letter-spacing: -0.01em;
+.logoPart {
+  display: block;
+  height: 100%;
+  width: auto;
+  background: currentColor;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
-.logoRest {
-  font-size: 1.55rem;
-  margin-left: 0.9em;
-  letter-spacing: -0.01em;
+.sovinsky {
+  height: 100%;
+}
+
+.dot {
+  height: 100%;
+}
+
+.studio {
+  height: 100%;
 }
 
 .logo:hover {
@@ -66,9 +78,8 @@
     padding-top: 14px;
   }
 
-  .logoMark,
-  .logoRest {
-    font-size: 1.35rem;
+  .logo {
+    height: 1.75rem;
   }
 
   .nav {
