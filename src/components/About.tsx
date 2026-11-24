@@ -5,6 +5,7 @@ import styles from "./About.module.css";
 
 export function About() {
   const body = site.about.replace(site.brand, "").trimStart();
+  let index = 0;
 
   return (
     <section id="about" className={styles.about}>
@@ -34,13 +35,31 @@ export function About() {
             </span>
           }
         />
-        <div className={styles.services} data-fade="">
-          <p className={styles.servicesLabel}>Usługi</p>
-          <ul className={styles.servicesList}>
-            {site.services.map((service) => (
-              <li key={service}>{service}</li>
+        <div className={styles.services} data-services="">
+          <p className={styles.servicesLabel} data-fade="">
+            Usługi
+          </p>
+          <div className={styles.servicesGrid}>
+            {site.serviceGroups.map((group) => (
+              <div key={group.title} className={styles.serviceGroup} data-service-group="">
+                <p className={styles.groupTitle}>{group.title}</p>
+                <ul className={styles.groupList}>
+                  {group.items.map((item) => {
+                    index += 1;
+                    const n = String(index).padStart(2, "0");
+                    return (
+                      <li key={item}>
+                        <span className={styles.num} aria-hidden="true">
+                          {n}
+                        </span>
+                        <span className={styles.item}>{item}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       </div>
     </section>

@@ -259,6 +259,23 @@ export function usePageMotion(ready: boolean) {
         );
       });
 
+      gsap.utils.toArray<HTMLElement>("[data-services]").forEach((wrap) => {
+        const groups = wrap.querySelectorAll<HTMLElement>("[data-service-group]");
+        if (!groups.length) return;
+        gsap.fromTo(
+          groups,
+          { opacity: 0, y: 28 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.85,
+            ease,
+            stagger: 0.12,
+            scrollTrigger: { trigger: wrap, start: "top 88%", once: true },
+          },
+        );
+      });
+
       // --- Theme morph: page turns light around About -------------------
       const toLight = () => gsap.to(root, { ...LIGHT, duration: 0.9, ease: "power2.inOut", overwrite: true });
       const toDark = () => gsap.to(root, { ...DARK, duration: 0.9, ease: "power2.inOut", overwrite: true });

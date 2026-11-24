@@ -55,30 +55,78 @@
 
 .services {
   margin-top: clamp(110px, 14vw, 180px);
-  text-align: center;
 }
 
 .servicesLabel {
-  margin: 0 0 28px;
+  margin: 0 0 clamp(36px, 5vw, 52px);
   font: 500 13px/1.3 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
+  text-align: center;
 }
 
-.servicesList {
-  list-style: none;
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(36px, 5vw, 64px) clamp(28px, 4vw, 48px);
+  max-width: min(1120px, 100%);
   margin: 0 auto;
+}
+
+.serviceGroup {
+  min-width: 0;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .serviceGroup {
+    opacity: 1;
+  }
+}
+
+.groupTitle {
+  margin: 0 0 20px;
+  font: 500 12px/1.3 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.groupList {
+  list-style: none;
+  margin: 0;
   padding: 0;
   display: grid;
-  gap: clamp(14px, 2vw, 22px);
-  max-width: 32em;
+  gap: 14px;
 }
 
-.servicesList li {
-  font-size: clamp(1.15rem, 2.4vw, 1.65rem);
+.groupList li {
+  display: grid;
+  grid-template-columns: 2.2em 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.num {
+  font: 500 0.78rem/1.4 var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.item {
+  font-size: clamp(1.05rem, 1.8vw, 1.28rem);
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.35;
   color: color-mix(in srgb, var(--ink) 92%, transparent);
+}
+
+@media (max-width: 809.98px) {
+  .servicesGrid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    max-width: 28em;
+  }
 }

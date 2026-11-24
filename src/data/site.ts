@@ -11,18 +11,23 @@ export const site = {
   whatsapp: "48574123044",
   about:
     "SowinSky Studio to miejsce, gdzie pomysł przeradza się w szkic, a następnie w realny produkt. Wszystko co robię powstaje z dbałością o detale i estetykę. Buduję strony i aplikacje od podstaw. Pracuję szybko, z naciskiem na wygląd, czytelność i funkcjonalność.",
-  services: [
-    "iOS",
-    "Android",
-    "macOS",
-    "Windows",
-    "Strony WWW",
-    "Sklepy internetowe",
-    "Aplikacje webowe",
-    "Opieka nad stronami",
-    "Wdrażanie aplikacji na App Store i Sklep Play",
-    "Indywidualne aplikacje wewnętrzne - rozwiązania dla firm",
-    "Automatyzacje",
+  serviceGroups: [
+    {
+      title: "Platformy",
+      items: ["iOS", "Android", "macOS", "Windows"],
+    },
+    {
+      title: "Web",
+      items: ["Strony WWW", "Sklepy internetowe", "Aplikacje webowe", "Opieka nad stronami"],
+    },
+    {
+      title: "Dla firm",
+      items: [
+        "Wdrażanie aplikacji na App Store i Sklep Play",
+        "Indywidualne aplikacje wewnętrzne - rozwiązania dla firm",
+        "Automatyzacje",
+      ],
+    },
   ],
 } as const;
 
