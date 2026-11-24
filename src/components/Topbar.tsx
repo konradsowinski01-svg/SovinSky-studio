@@ -17,12 +17,7 @@ export function Topbar({ route }: Props) {
   const away = route === "portfolio";
   return (
     <header className={styles.topbar} data-topbar>
-      <a
-        className={styles.logo}
-        href="#top"
-        data-burn={away ? "" : undefined}
-        aria-label={`${site.brand}, wróć na górę`}
-      >
+      <a className={styles.logo} href="#top" aria-label={`${site.brand}, wróć na górę`}>
         {logoParts.map((part) => (
           <span
             key={part.id}
@@ -41,7 +36,6 @@ export function Topbar({ route }: Props) {
           <a
             key={link.href}
             href={link.href}
-            data-burn={away || link.href === PORTFOLIO_HASH ? "" : undefined}
             aria-current={away && link.href === PORTFOLIO_HASH ? "page" : undefined}
           >
             {link.label}

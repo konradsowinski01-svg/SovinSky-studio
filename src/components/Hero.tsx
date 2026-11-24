@@ -40,6 +40,47 @@ export function Hero() {
           </div>
         </div>
       </div>
+      <div className={styles.scrollCue} data-hero-scroll="" aria-hidden="true">
+        <svg
+          className={styles.scrollCueIcon}
+          viewBox="0 0 14 28"
+          fill="none"
+        >
+          <defs>
+            <filter
+              id="hero-scroll-grain"
+              x="-50%"
+              y="-20%"
+              width="200%"
+              height="140%"
+              colorInterpolationFilters="sRGB"
+            >
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="2.4"
+                numOctaves="3"
+                stitchTiles="stitch"
+                result="noise"
+              />
+              <feDisplacementMap
+                in="SourceGraphic"
+                in2="noise"
+                scale="0.7"
+                xChannelSelector="R"
+                yChannelSelector="G"
+              />
+            </filter>
+          </defs>
+          <path
+            d="M7 1.5v20.5M2.5 17.5 7 22.5l4.5-5"
+            stroke="currentColor"
+            strokeWidth="1.15"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            filter="url(#hero-scroll-grain)"
+          />
+        </svg>
+      </div>
     </section>
   );
 }

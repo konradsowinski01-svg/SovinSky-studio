@@ -1,0 +1,40 @@
+.root {
+  position: relative;
+}
+
+.root:not([data-state="done"]) [data-fractal-unit] {
+  opacity: 0;
+}
+
+.root[data-state="done"] [data-fractal-unit] {
+  opacity: 1;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 0.35s ease;
+}
+
+.live {
+  position: relative;
+  z-index: 1;
+}
+
+.word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.char {
+  display: inline-block;
+  will-change: opacity;
+}
+
+.space {
+  white-space: pre;
+}

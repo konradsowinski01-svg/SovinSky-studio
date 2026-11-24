@@ -2,19 +2,16 @@
 export const site = {
   brand: "SovinSky Studio",
   brandShort: "SovinSky",
-  tagline: ["Projektuję. Buduję. Wdrażam.", "Aplikacje iOS, Android, strony WWW."],
+  tagline: ["Projektuję. Buduję. Wdrażam.", "Aplikacje i strony — od pomysłu po produkt."],
   lead: "Od szkicu do gotowego produktu, end to end.",
   location: "Polska",
   status: "Otwarty na nowe projekty.",
   email: "kontakt@sovinsky.studio",
   phone: "+48 000 000 000",
   whatsapp: "48000000000",
-  about: [
-    "SovinSky Studio to pracownia stron internetowych i aplikacji — od pierwszego szkicu po działający produkt w przeglądarce.",
-    "Buduję czytelne landingi, strony firmowe i lekkie aplikacje webowe. Skupiam się na tym, żeby klient z SMS-a od razu wiedział, kim jesteś i co może zamówić.",
-    "Pracuję szybko, w kodzie, z naciskiem na wygląd, czytelność na telefonie i jedno wyraźne wezwanie do kontaktu.",
-  ],
-  services: ["Strony WWW", "Landing pages", "Aplikacje webowe"],
+  about:
+    "SovinSky Studio to miejsce, gdzie pomysł przeradza się w szkic, a potem w realny produkt. Wszystko powstaje z dbałością o detale i estetykę. Tworzę aplikacje na iOS, Androida, macOS i Windows — albo od razu na wszystkie platformy. Od podstaw buduję też strony WWW i aplikacje webowe. Pracuję szybko, z naciskiem na wygląd, czytelność, funkcjonalność i estetykę.",
+  services: ["iOS", "Android", "macOS", "Windows", "Strony WWW", "Aplikacje webowe"],
 } as const;
 
 export type Project = {

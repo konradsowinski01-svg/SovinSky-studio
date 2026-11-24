@@ -19,7 +19,7 @@ export function Portfolio() {
             Każdy projekt zaprojektowałem i zbudowałem od zera, z myślą o telefonie i szybkim
             kontakcie.
           </p>
-          <a href="#contact" data-burn="" className={styles.cta}>
+          <a href="#contact" className={styles.cta}>
             Napisz w sprawie projektu <span aria-hidden="true">→</span>
           </a>
         </div>

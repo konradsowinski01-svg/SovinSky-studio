@@ -8,9 +8,9 @@ export function Work() {
   return (
     <section id="work" className={styles.work} aria-label="Wybrane projekty">
       <div className={styles.head}>
-        <LiquidHeading text="Latest Work" className={styles.heading} />
+        <LiquidHeading text="Wybrane prace" className={styles.heading} />
         <RollLink href="#/portfolio" arrow className={styles.showAll}>
-          Show all
+          pokaż wszystkie
         </RollLink>
       </div>
 

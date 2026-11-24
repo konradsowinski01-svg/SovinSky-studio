@@ -1,0 +1,11 @@
+.field {
+  position: relative;
+  isolation: isolate;
+}
+
+.field :global(#work),
+.field :global(#about),
+.field :global(#contact) {
+  position: relative;
+  z-index: 1;
+}

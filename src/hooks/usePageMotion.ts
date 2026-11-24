@@ -44,19 +44,37 @@ export function usePageMotion(ready: boolean) {
         { opacity: 0, y: -14 },
         { opacity: 1, y: 0, duration: 0.8, ease, stagger: 0.08, delay: 0.3 },
       );
+      gsap.fromTo(
+        "[data-hero-scroll]",
+        { opacity: 0 },
+        {
+          opacity: 0.9,
+          duration: 0.9,
+          ease,
+          delay: 1.15,
+          onComplete: () => {
+            const cue = document.querySelector<HTMLElement>("[data-hero-scroll]");
+            if (!cue) return;
+            cue.dataset.ready = "true";
+            gsap.set(cue, { clearProps: "opacity" });
+          },
+        },
+      );
 
-      // --- Hero scroll: inner layer lags at 0.4x, bottom fade ramps in ----
+      // --- Hero scroll: fade + scroll cue (no parallax lag) ----
       const hero = document.getElementById("hero");
-      const inner = document.querySelector<HTMLElement>("[data-hero-inner]");
       const fade = document.querySelector<HTMLElement>("[data-hero-fade]");
-      if (hero && inner) {
+      const scrollCue = document.querySelector<HTMLElement>("[data-hero-scroll]");
+      if (hero) {
         const onScroll = () => {
           const h = hero.offsetHeight || window.innerHeight;
           const y = Math.max(0, Math.min(window.scrollY, h));
-          inner.style.transform = y ? `translate3d(0, ${(y * 0.4).toFixed(2)}px, 0)` : "";
           if (fade) {
             const t = (y / h - 0.03) / (0.22 - 0.03);
             fade.style.opacity = String(Math.min(1, Math.max(0, t)));
+          }
+          if (scrollCue) {
+            scrollCue.dataset.hidden = y > h * 0.08 ? "true" : "false";
           }
         };
         onScroll();

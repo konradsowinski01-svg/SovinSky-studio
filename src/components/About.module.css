@@ -1,10 +1,14 @@
 .about {
   position: relative;
+  isolation: isolate;
+  min-height: clamp(720px, 96vh, 1100px);
 }
 
 .band {
-  padding: clamp(96px, 14vw, 180px) var(--gutter) clamp(96px, 14vw, 180px);
-  max-width: 1280px;
+  position: relative;
+  z-index: 1;
+  padding: clamp(200px, 28vw, 360px) var(--gutter) clamp(380px, 44vw, 600px);
+  max-width: min(1480px, 100%);
 }
 
 .heading {
@@ -15,30 +19,39 @@
   margin-bottom: 32px;
 }
 
-.lede {
-  max-width: 17em;
-  font-size: clamp(2rem, 4.6vw, 4rem);
+.body {
+  max-width: none;
+  font-size: clamp(1.45rem, 2.9vw, 2.15rem);
   font-weight: 400;
-  letter-spacing: -0.04em;
-  line-height: 1.08;
+  letter-spacing: -0.025em;
+  line-height: 1.42;
+  color: color-mix(in srgb, var(--ink) 88%, transparent);
 }
 
-.brandInline {
-  font-family: var(--font-brand);
-  font-weight: 400;
-  font-synthesis: none;
-  color: var(--accent);
-  letter-spacing: 0;
+.brandLogo {
+  display: inline-flex;
+  align-items: stretch;
+  height: 1.55em;
+  vertical-align: -0.35em;
+  margin-right: 0.22em;
 }
 
-.copy {
-  margin-top: 40px;
-  display: grid;
-  gap: 1.1em;
-  max-width: 34em;
-  color: color-mix(in srgb, var(--ink) 78%, transparent);
-  font-size: clamp(1.05rem, 1.55vw, 1.25rem);
-  line-height: 1.55;
+.brandPart {
+  display: block;
+  height: 100%;
+  width: auto;
+  background-image: linear-gradient(
+    125deg,
+    #ffb060 0%,
+    var(--accent) 48%,
+    var(--accent-deep) 100%
+  );
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 
 .services {
