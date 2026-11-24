@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { projects } from "../data/site";
 import { makeTexture } from "./ProjectWarp";
+import { PortfolioSand } from "./PortfolioSand";
+import { PortfolioTitle } from "./PortfolioTitle";
 import styles from "./Portfolio.module.css";
 
 export function Portfolio() {
@@ -12,7 +14,11 @@ export function Portfolio() {
   return (
     <main id="main" className={styles.page}>
       <header className={styles.head}>
-        <h1 className={styles.title}>portfolio</h1>
+        <div className={styles.mark} aria-hidden="true">
+          <PortfolioTitle />
+          <PortfolioSand />
+        </div>
+        <h1 className="sr-only">Portfolio</h1>
         <div className={styles.intro}>
           <p>
             Wybrane realizacje: strony firmowe, landingi pod kampanie i lekkie aplikacje webowe.
