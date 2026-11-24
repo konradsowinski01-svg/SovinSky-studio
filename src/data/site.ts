@@ -1,16 +1,16 @@
 /** Podmień dane kontaktowe przed wysyłką SMS-ów. */
 export const site = {
-  brand: "SovinSky Studio",
-  brandShort: "SovinSky",
+  brand: "SowinSky Studio",
+  brandShort: "SowinSky",
   tagline: ["Projektuję. Buduję. Wdrażam.", "Aplikacje iOS, Android, Web App, Strony WWW."],
   lead: "Od szkicu do gotowego produktu, end to end.",
   location: "Polska",
   status: "Otwarty na nowe projekty.",
-  email: "kontakt@sovinsky.studio",
+  email: "kontakt@sowinsky.studio",
   phone: "+48 000 000 000",
   whatsapp: "48000000000",
   about:
-    "SovinSky Studio to miejsce, gdzie pomysł przeradza się w szkic, a potem w realny produkt. Wszystko powstaje z dbałością o detale i estetykę. Tworzę aplikacje na iOS, Androida, macOS i Windows — albo od razu na wszystkie platformy. Od podstaw buduję też strony WWW i aplikacje webowe. Pracuję szybko, z naciskiem na wygląd, czytelność, funkcjonalność i estetykę.",
+    "SowinSky Studio to miejsce, gdzie pomysł przeradza się w szkic, a potem w realny produkt. Wszystko powstaje z dbałością o detale i estetykę. Tworzę aplikacje na iOS, Androida, macOS i Windows — albo od razu na wszystkie platformy. Od podstaw buduję też strony WWW i aplikacje webowe. Pracuję szybko, z naciskiem na wygląd, czytelność, funkcjonalność i estetykę.",
   services: ["iOS", "Android", "macOS", "Windows", "Strony WWW", "Aplikacje webowe"],
 } as const;
 

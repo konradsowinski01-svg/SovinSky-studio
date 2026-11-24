@@ -243,17 +243,16 @@ export function PortraitCloud() {
       const cosP = Math.cos(PITCH);
       const sinP = Math.sin(PITCH);
 
-      // Anchor size/placement to About so scale stays familiar while the
-      // canvas spans Work → Contact and particles can bleed into both.
+      // Size from About; pin helix to viewport mid on every breakpoint so
+      // DNA holds still while Work / About / Contact scroll past it.
       const about = document.getElementById("about");
       const aboutRect = about?.getBoundingClientRect();
+      const mobile = w < 810;
       const refW = aboutRect?.width || w;
       const refH = aboutRect?.height || Math.min(h, window.innerHeight);
-      const scale = Math.min(refW, refH) * (w < 810 ? 2.1 : 2.55);
-      const ox = w * (w < 810 ? 0.66 : 0.74);
-      const oy = aboutRect
-        ? aboutRect.top - rect.top + aboutRect.height * 0.5
-        : h * 0.5;
+      const scale = Math.min(refW, Math.min(refH, window.innerHeight)) * (mobile ? 1.85 : 2.55);
+      const ox = w * (mobile ? 0.62 : 0.74);
+      const oy = window.innerHeight * 0.5 - rect.top;
       const light = isLightBg();
 
       // Soft reveal starting around the last Work tile ("Kampania SMS"),
@@ -269,8 +268,10 @@ export function PortraitCloud() {
       const contactTop = contact
         ? contact.getBoundingClientRect().top - rect.top
         : h * 0.85;
-      const fadeOutStart = contactTop + Math.min(h * 0.08, 100);
-      const fadeOutEnd = h * 0.98;
+      // Soft bottom trim only — helix anchor (oy) unchanged, just shorter below.
+      const bottomTrim = 270;
+      const fadeOutStart = contactTop + Math.min(h * 0.08, 100) - bottomTrim;
+      const fadeOutEnd = h * 0.98 - bottomTrim;
 
       const edgeFadeAt = (py: number) => {
         let f = 1;
@@ -306,7 +307,10 @@ export function PortraitCloud() {
           let px = ox + p.x * scale * p.p;
           let py = oy - p.y * scale * p.p;
           let pr = d.r * p.p * (1.05 + depth * 0.4) * (light ? 1.2 : 1.1);
-          let pa = d.a * (0.7 + depth * 0.45) * (light ? 1.35 : 1.15) * edgeFadeAt(py);
+          // Mobile: dial DNA down so About copy stays readable over the helix.
+          const opacityMul = mobile ? (light ? 0.42 : 0.48) : 1;
+          let pa =
+            d.a * (0.7 + depth * 0.45) * (light ? 1.35 : 1.15) * edgeFadeAt(py) * opacityMul;
 
           if (magnet > 0.02) {
             const dx = pointerX - px;

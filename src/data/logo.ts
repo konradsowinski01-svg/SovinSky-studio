@@ -1,20 +1,20 @@
 const asset = (file: string) => `${import.meta.env.BASE_URL}${file}`;
 
-/** Transparent gothic mark, split so each piece can layout independently. */
+/** Transparent gothic mark (SowinSky.studio), split so each piece can layout independently. */
 export const logoParts = [
   {
-    id: "sovinsky",
-    src: asset("logo-sovinsky.png"),
-    src2x: asset("logo-sovinsky@2x.png"),
-    width: 577,
+    id: "sowinsky",
+    src: asset("logo-sowinsky.png"),
+    src2x: asset("logo-sowinsky@2x.png"),
+    width: 646,
     height: 242,
-    label: "SovinSky",
+    label: "SowinSky",
   },
   {
     id: "dot",
     src: asset("logo-dot.png"),
     src2x: asset("logo-dot@2x.png"),
-    width: 26,
+    width: 10,
     height: 242,
     label: ".",
   },
@@ -22,7 +22,7 @@ export const logoParts = [
     id: "studio",
     src: asset("logo-studio.png"),
     src2x: asset("logo-studio@2x.png"),
-    width: 286,
+    width: 317,
     height: 242,
     label: "studio",
   },

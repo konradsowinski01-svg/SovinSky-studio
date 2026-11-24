@@ -10,7 +10,6 @@ export function Contact() {
 
   return (
     <section id="contact" className={styles.contact}>
-      <div className={styles.glow} aria-hidden="true" data-contact-glow="" />
       <div className={styles.grain} aria-hidden="true" />
       <h2 className="sr-only">Kontakt</h2>
       <p className={styles.label} data-fade="">

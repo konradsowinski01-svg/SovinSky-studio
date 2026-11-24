@@ -1,4 +1,4 @@
-# SovinSky Studio
+# SowinSky Studio
 
 Portfolio i oferta — strony oraz aplikacje. Klimat inspirowany nowoczesnymi studio portfolio (layout + motion), z własną marką i treścią.
 

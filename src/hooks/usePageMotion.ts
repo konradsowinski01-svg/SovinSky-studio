@@ -272,15 +272,6 @@ export function usePageMotion(ready: boolean) {
         onLeaveBack: toDark,
       });
 
-      // --- Contact glow breathes ---------------------------------------
-      gsap.to("[data-contact-glow]", {
-        scale: 1.15,
-        xPercent: 6,
-        duration: 5,
-        ease: "sine.inOut",
-        yoyo: true,
-        repeat: -1,
-      });
     });
 
     return () => {
