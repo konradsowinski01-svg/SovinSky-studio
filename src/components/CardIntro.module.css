@@ -1,0 +1,66 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 6vw, 48px);
+  background: #000;
+  color: #e8e4dc;
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity 1.1s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.line {
+  margin: 0;
+  max-width: 18em;
+  font-family: "Special Elite", "Courier New", Courier, monospace;
+  font-size: clamp(1.15rem, 3.6vw, 1.85rem);
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.caret {
+  display: inline-block;
+  width: 0.55ch;
+  height: 1.05em;
+  margin-left: 0.12em;
+  vertical-align: -0.12em;
+  background: currentColor;
+  animation: blink 0.85s steps(1, end) infinite;
+}
+
+.caretIdle {
+  animation-duration: 1.05s;
+}
+
+@keyframes blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition-duration: 0.01ms;
+  }
+
+  .caret {
+    animation: none;
+    opacity: 0.7;
+  }
+}

@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { About } from "./components/About";
 import { AmbientFractals } from "./components/AmbientFractals";
+import { CardIntro } from "./components/CardIntro";
 import { Contact } from "./components/Contact";
 import { DnaField } from "./components/DnaField";
 import { Footer } from "./components/Footer";
@@ -13,17 +14,26 @@ import { Work } from "./components/Work";
 import { useLenis } from "./hooks/useLenis";
 import { usePageMotion } from "./hooks/usePageMotion";
 import { getLenis } from "./lib/lenisStore";
-import { useRoute } from "./lib/router";
+import { isCardEntry, useRoute } from "./lib/router";
 import styles from "./App.module.css";
 
 export default function App() {
   const [ready, setReady] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
+  const cardEntry = useRef(isCardEntry()).current;
   const doneRef = useRef(false);
-  const onDone = useCallback(() => {
+  const revealHome = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
     setReady(true);
   }, []);
+  const dismissIntro = useCallback(() => {
+    setShowIntro(false);
+  }, []);
+  const finishPreloader = useCallback(() => {
+    revealHome();
+    dismissIntro();
+  }, [dismissIntro, revealHome]);
   const route = useRoute();
   useLenis(ready);
   usePageMotion(ready && route === "home");
@@ -50,7 +60,13 @@ export default function App() {
 
   return (
     <>
-      {!ready ? <Preloader onDone={onDone} /> : null}
+      {showIntro ? (
+        cardEntry ? (
+          <CardIntro onReveal={revealHome} onDone={dismissIntro} />
+        ) : (
+          <Preloader onDone={finishPreloader} />
+        )
+      ) : null}
       <div
         id="top"
         className={`${styles.app} ${ready ? styles.revealed : styles.hidden}`}
