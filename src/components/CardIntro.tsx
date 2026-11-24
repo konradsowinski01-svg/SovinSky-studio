@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { logoParts } from "../data/logo";
+import topbarStyles from "./Topbar.module.css";
 import styles from "./CardIntro.module.css";
 
 const MESSAGE = "Miło Cię poznać, zobacz co możemy razem zbudować";
-const HOLD_MS = 3000;
+const HOLD_MS = 1500;
 const FADE_MS = 1100;
 
 type Props = {
@@ -37,7 +39,7 @@ export function CardIntro({ onReveal, onDone }: Props) {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
       setVisible(MESSAGE);
-      finish(1200);
+      finish(900);
       return () => {
         cancelled = true;
         timers.forEach(clearTimeout);
@@ -70,6 +72,20 @@ export function CardIntro({ onReveal, onDone }: Props) {
       aria-live="polite"
       aria-busy={!doneTyping}
     >
+      <div className={styles.sheet} aria-hidden="true" />
+      <div className={`${styles.logoSlot} ${topbarStyles.logo}`} aria-hidden="true">
+        {logoParts.map((part) => (
+          <span
+            key={part.id}
+            className={`${topbarStyles.logoPart} ${topbarStyles[part.id]}`}
+            style={{
+              aspectRatio: `${part.width} / ${part.height}`,
+              WebkitMaskImage: `image-set(url("${part.src}") 1x, url("${part.src2x}") 2x)`,
+              maskImage: `image-set(url("${part.src}") 1x, url("${part.src2x}") 2x)`,
+            }}
+          />
+        ))}
+      </div>
       <p className={styles.line}>
         <span>{visible}</span>
         <span
