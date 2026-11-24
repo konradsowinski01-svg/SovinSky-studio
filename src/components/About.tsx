@@ -1,7 +1,6 @@
 import { site } from "../data/site";
 import { logoParts } from "../data/logo";
 import { FractalMaterialize } from "./FractalMaterialize";
-import { RollLink } from "./RollLink";
 import styles from "./About.module.css";
 
 export function About() {
@@ -35,15 +34,13 @@ export function About() {
             </span>
           }
         />
-        <ul className={styles.services} data-fade="">
-          {site.services.map((service) => (
-            <li key={service}>{service}</li>
-          ))}
-        </ul>
-        <div data-fade="">
-          <RollLink href="#contact" arrow className={styles.cta}>
-            Napisz o projekcie
-          </RollLink>
+        <div className={styles.services} data-fade="">
+          <p className={styles.servicesLabel}>Usługi</p>
+          <ul className={styles.servicesList}>
+            {site.services.map((service) => (
+              <li key={service}>{service}</li>
+            ))}
+          </ul>
         </div>
       </div>
     </section>

@@ -3,17 +3,10 @@ import styles from "./Footer.module.css";
 
 export function Footer() {
   const year = new Date().getFullYear();
+  const tel = site.phone.replace(/\s+/g, "");
 
   return (
     <footer id="foot" className={styles.foot}>
-      <div className={styles.col}>
-        <p className={styles.label}>Usługi</p>
-        <ul>
-          {site.services.map((service) => (
-            <li key={service}>{service}</li>
-          ))}
-        </ul>
-      </div>
       <div className={styles.col}>
         <p className={styles.label}>Kontakt</p>
         <ul>
@@ -21,7 +14,12 @@ export function Footer() {
             <a href={`mailto:${site.email}`}>{site.email}</a>
           </li>
           <li>
-            <a href={`tel:${site.phone.replace(/\s+/g, "")}`}>{site.phone}</a>
+            <a href={`tel:${tel}`}>{site.phone}</a>
+          </li>
+          <li>
+            <a href={`https://wa.me/${site.whatsapp}`} target="_blank" rel="noreferrer">
+              WhatsApp
+            </a>
           </li>
         </ul>
       </div>

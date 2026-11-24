@@ -6,12 +6,24 @@ export const site = {
   lead: "Od szkicu do gotowego produktu, end to end.",
   location: "Polska",
   status: "Otwarty na nowe projekty.",
-  email: "kontakt@sowinsky.studio",
-  phone: "+48 000 000 000",
-  whatsapp: "48000000000",
+  email: "konrad.sowinski01@gmail.com",
+  phone: "+48 574 123 044",
+  whatsapp: "48574123044",
   about:
-    "SowinSky Studio to miejsce, gdzie pomysł przeradza się w szkic, a potem w realny produkt. Wszystko powstaje z dbałością o detale i estetykę. Tworzę aplikacje na iOS, Androida, macOS i Windows — albo od razu na wszystkie platformy. Od podstaw buduję też strony WWW i aplikacje webowe. Pracuję szybko, z naciskiem na wygląd, czytelność, funkcjonalność i estetykę.",
-  services: ["iOS", "Android", "macOS", "Windows", "Strony WWW", "Aplikacje webowe"],
+    "SowinSky Studio to miejsce, gdzie pomysł przeradza się w szkic, a następnie w realny produkt. Wszystko co robię powstaje z dbałością o detale i estetykę. Buduję strony i aplikacje od podstaw. Pracuję szybko, z naciskiem na wygląd, czytelność i funkcjonalność.",
+  services: [
+    "iOS",
+    "Android",
+    "macOS",
+    "Windows",
+    "Strony WWW",
+    "Sklepy internetowe",
+    "Aplikacje webowe",
+    "Opieka nad stronami",
+    "Wdrażanie aplikacji na App Store i Sklep Play",
+    "Indywidualne aplikacje wewnętrzne - rozwiązania dla firm",
+    "Automatyzacje",
+  ],
 } as const;
 
 export type Project = {

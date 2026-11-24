@@ -1,13 +1,12 @@
 .about {
   position: relative;
   isolation: isolate;
-  min-height: clamp(720px, 96vh, 1100px);
 }
 
 .band {
   position: relative;
   z-index: 1;
-  padding: clamp(200px, 28vw, 360px) var(--gutter) clamp(380px, 44vw, 600px);
+  padding: clamp(64px, 8vw, 100px) var(--gutter) 50px;
   max-width: min(1480px, 100%);
 }
 
@@ -55,31 +54,31 @@
 }
 
 .services {
+  margin-top: clamp(110px, 14vw, 180px);
+  text-align: center;
+}
+
+.servicesLabel {
+  margin: 0 0 28px;
+  font: 500 13px/1.3 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.servicesList {
   list-style: none;
-  margin: 44px 0 0;
+  margin: 0 auto;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  gap: clamp(14px, 2vw, 22px);
+  max-width: 32em;
 }
 
-.services li {
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  padding: 12px 20px;
-  font-size: 0.95rem;
-  transition: border-color 0.3s, color 0.3s, background-color 0.3s;
-}
-
-.services li:hover {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
-}
-
-.cta {
-  margin-top: 44px;
-  color: var(--accent);
-  font-weight: 500;
-  font-size: 1.1rem;
+.servicesList li {
+  font-size: clamp(1.15rem, 2.4vw, 1.65rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--ink) 92%, transparent);
 }
