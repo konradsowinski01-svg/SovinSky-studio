@@ -1,73 +1,75 @@
-/** Prosty odtwarzacz dla `#/w` — zwykłe HTMLAudioElement, zero Web Audio. */
+/**
+ * `#/w` — AudioBufferSourceNode, jedno source.start(now + delay).
+ * resume() synchronicznie w geście; bez HTMLAudio mute/pause.
+ */
 
 const SRC = `${import.meta.env.BASE_URL}card-intro.mp3`;
-const DELAY_MS = 1130;
+const DELAY_SEC = 1.13;
 
-let el: HTMLAudioElement | null = null;
-let timer = 0;
+let ctx: AudioContext | null = null;
+let buffer: AudioBuffer | null = null;
+let loadPromise: Promise<AudioBuffer> | null = null;
 let started = false;
 
-function getAudio(): HTMLAudioElement {
-  if (el) return el;
-  el = new Audio(SRC);
-  el.preload = "auto";
-  el.setAttribute("playsinline", "true");
-  el.setAttribute("webkit-playsinline", "true");
-  return el;
+function getCtx(): AudioContext {
+  if (ctx) return ctx;
+  const AC =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  ctx = new AC();
+  return ctx;
 }
 
-/** Preload po wejściu na kartę. */
+function loadBuffer(): Promise<AudioBuffer> {
+  if (buffer) return Promise.resolve(buffer);
+  if (loadPromise) return loadPromise;
+  const audioCtx = getCtx();
+  loadPromise = fetch(SRC)
+    .then((r) => {
+      if (!r.ok) throw new Error(`audio fetch ${r.status}`);
+      return r.arrayBuffer();
+    })
+    .then((raw) => audioCtx.decodeAudioData(raw.slice(0)))
+    .then((decoded) => {
+      buffer = decoded;
+      return decoded;
+    })
+    .catch((err) => {
+      loadPromise = null;
+      throw err;
+    });
+  return loadPromise;
+}
+
 export function armCardMusic(): () => void {
-  getAudio();
-  return () => {
-    if (timer) window.clearTimeout(timer);
-  };
+  void getCtx();
+  void loadBuffer().catch(() => undefined);
+  return () => undefined;
 }
 
-/**
- * Tap: cichy kick tylko do odblokowania autoplay,
- * słyszalny play dopiero po DELAY_MS (jeden raz).
- */
 export function startCardMusicFromTap(): void {
   if (started) return;
-  const a = getAudio();
-  if (timer) window.clearTimeout(timer);
+  started = true;
 
-  // Cichy unlock w geście — nie ma być słyszalny.
-  a.muted = true;
-  a.volume = 0;
-  try {
-    a.currentTime = 0;
-  } catch {
-    /* ignore */
-  }
-  const kick = a.play();
-  if (kick) {
-    void kick
-      .then(() => {
-        if (started) return;
-        a.pause();
-        try {
-          a.currentTime = 0;
-        } catch {
-          /* ignore */
-        }
-      })
-      .catch(() => undefined);
-  }
+  const audioCtx = getCtx();
+  // Musi być synchronicznie w pointerdown — inaczej Safari gubi gest.
+  void audioCtx.resume();
 
-  timer = window.setTimeout(() => {
-    timer = 0;
-    started = true;
-    a.muted = false;
-    a.volume = 1;
-    try {
-      a.currentTime = 0;
-    } catch {
-      /* ignore */
-    }
-    void a.play().catch(() => {
+  void loadBuffer()
+    .then((buf) => {
+      const play = () => {
+        const source = audioCtx.createBufferSource();
+        source.buffer = buf;
+        source.connect(audioCtx.destination);
+        source.start(audioCtx.currentTime + DELAY_SEC);
+      };
+      if (audioCtx.state === "running") {
+        play();
+        return;
+      }
+      return audioCtx.resume().then(play);
+    })
+    .catch(() => {
       started = false;
     });
-  }, DELAY_MS);
 }
