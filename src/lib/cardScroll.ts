@@ -27,6 +27,7 @@ const CUES: Cue[] = [
   { at: 6, duration: 1.4, anchor: "work-heading", align: "top" },
   { at: 8.8, duration: 1.4, anchor: "firma-online", align: "top" },
   { at: 11, duration: 1.4, anchor: "kampania-sms", align: "center" },
+  { at: 13, duration: 1.4, anchor: "about", align: "center" },
 ];
 
 const easeOutQuart = (t: number) => 1 - (1 - t) ** 4;

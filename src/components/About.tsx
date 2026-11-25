@@ -8,7 +8,7 @@ export function About() {
   let index = 0;
 
   return (
-    <section id="about" className={styles.about}>
+    <section id="about" className={styles.about} data-card-anchor="about">
       <div className={styles.band}>
         <p className={styles.heading} data-fade="">
           O studio
