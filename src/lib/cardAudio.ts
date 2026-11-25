@@ -1,4 +1,4 @@
-/** Muzyka tylko dla `#/w` — wyłącznie wycinek 2:44–3:10. */
+/** Muzyka tylko dla `#/w` — wyłącznie wycinek 2:44–3:10, start przy tap. */
 
 const SRC = `${import.meta.env.BASE_URL}card-theme.mp3`;
 /** Stały fragment utworu — nic poza tym nie gra. */
@@ -12,7 +12,6 @@ const FADE_OUT_MS = (CARD_MUSIC_END - CARD_MUSIC_FADE_AT) * 1000;
 
 let audio: HTMLAudioElement | null = null;
 let started = false;
-let unlocked = false;
 let readyPromise: Promise<void> | null = null;
 let endWatch: (() => void) | null = null;
 
@@ -103,42 +102,11 @@ function stopAtEnd(el: HTMLAudioElement) {
   endWatch = () => el.removeEventListener("timeupdate", onTime);
 }
 
-async function seekAndPlay(): Promise<boolean> {
-  const el = ensure();
-  if (started && !el.paused) return true;
-
-  try {
-    await whenReady(el);
-    try {
-      el.currentTime = CARD_MUSIC_START;
-    } catch {
-      /* Safari bywa kapryśny przed pełnym loadem */
-    }
-    if (Math.abs(el.currentTime - CARD_MUSIC_START) > 1) {
-      await new Promise<void>((r) => {
-        const onSeek = () => {
-          el.removeEventListener("seeked", onSeek);
-          r();
-        };
-        el.addEventListener("seeked", onSeek);
-        window.setTimeout(r, 150);
-      });
-      try {
-        el.currentTime = CARD_MUSIC_START;
-      } catch {
-        /* ignore */
-      }
-    }
-    el.muted = false;
-    el.volume = 0;
-    await el.play();
-    started = true;
-    stopAtEnd(el);
-    fadeVolume(el, TARGET_VOL, FADE_IN_MS);
-    return true;
-  } catch {
-    return false;
-  }
+function markPlaying(el: HTMLAudioElement) {
+  if (started) return;
+  started = true;
+  stopAtEnd(el);
+  fadeVolume(el, TARGET_VOL, FADE_IN_MS);
 }
 
 /** Preload na starcie czarnego ekranu. */
@@ -149,41 +117,50 @@ export function armCardMusic(): () => void {
 }
 
 /**
- * Synchronicznie w pointerdown — odblokowuje silnik Safari/Chrome.
- * Bez await, żeby nie stracić user activation.
+ * Start wycinka 2:44–3:10 synchronicznie w pointerdown (tap to start).
+ * play() musi pójść w geście użytkownika — bez await.
  */
-export function unlockCardMusic(): void {
-  if (unlocked && audio) return;
+export function startCardMusicFromTap(): void {
+  if (started && audio && !audio.paused) return;
   const el = ensure();
-  el.muted = true;
+  el.muted = false;
   el.volume = 0;
   try {
     el.currentTime = CARD_MUSIC_START;
   } catch {
-    /* ignore */
+    /* ignore — poprawimy po metadata */
   }
-  const playAttempt = el.play();
-  unlocked = true;
-  if (playAttempt) {
-    void playAttempt
-      .then(() => {
-        el.pause();
-        el.muted = false;
-        try {
-          el.currentTime = CARD_MUSIC_START;
-        } catch {
-          /* ignore */
-        }
-      })
-      .catch(() => {
-        unlocked = false;
-      });
-  }
-}
 
-/** Wołane ~1 s przed pierwszym znakiem „zbudować”. */
-export async function cueCardMusic(): Promise<boolean> {
-  return seekAndPlay();
+  const playAttempt = el.play();
+  if (!playAttempt) {
+    markPlaying(el);
+    return;
+  }
+
+  void playAttempt
+    .then(async () => {
+      try {
+        await whenReady(el);
+        if (Math.abs(el.currentTime - CARD_MUSIC_START) > 1) {
+          el.currentTime = CARD_MUSIC_START;
+          await new Promise<void>((r) => {
+            const onSeek = () => {
+              el.removeEventListener("seeked", onSeek);
+              r();
+            };
+            el.addEventListener("seeked", onSeek);
+            window.setTimeout(r, 150);
+          });
+          if (el.paused) await el.play();
+        }
+      } catch {
+        /* już gra z przybliżonego seeka */
+      }
+      markPlaying(el);
+    })
+    .catch(() => {
+      /* autoplay zablokowany — tap powinien to odblokować; zostawiamy begun UI */
+    });
 }
 
 export function isCardMusicPlaying(): boolean {

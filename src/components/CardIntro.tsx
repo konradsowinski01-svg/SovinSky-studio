@@ -1,16 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { logoParts } from "../data/logo";
-import { armCardMusic, cueCardMusic, unlockCardMusic } from "../lib/cardAudio";
+import { armCardMusic, startCardMusicFromTap } from "../lib/cardAudio";
 import topbarStyles from "./Topbar.module.css";
 import styles from "./CardIntro.module.css";
 
 const MESSAGE = "Miło Cię poznać, zobacz co możemy razem zbudować";
-/** Pierwszy znak ostatniego słowa. */
-const LAST_WORD_AT = MESSAGE.lastIndexOf("zbudować");
-/** Średni delay znaku — wycinek 2:44–3:10 ~1 s przed „zbudować”. */
-const CHAR_AVG_MS = 57;
-const MUSIC_LEAD_MS = 1000;
-const CUE_AT = Math.max(0, LAST_WORD_AT - Math.ceil(MUSIC_LEAD_MS / CHAR_AVG_MS));
 const HOLD_MS = 1500;
 const FADE_MS = 1100;
 
@@ -26,7 +20,6 @@ export function CardIntro({ onReveal, onDone }: Props) {
   const [visible, setVisible] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [doneTyping, setDoneTyping] = useState(false);
-  const musicCued = useRef(false);
   const starting = useRef(false);
 
   useEffect(() => {
@@ -42,12 +35,6 @@ export function CardIntro({ onReveal, onDone }: Props) {
       timers.push(window.setTimeout(fn, ms));
     };
 
-    const cueMusicOnce = () => {
-      if (musicCued.current) return;
-      musicCued.current = true;
-      void cueCardMusic();
-    };
-
     const finish = (hold: number) => {
       setDoneTyping(true);
       later(() => {
@@ -61,7 +48,6 @@ export function CardIntro({ onReveal, onDone }: Props) {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
       setVisible(MESSAGE);
-      cueMusicOnce();
       finish(900);
       return () => {
         cancelled = true;
@@ -75,7 +61,6 @@ export function CardIntro({ onReveal, onDone }: Props) {
       if (i < MESSAGE.length) {
         i += 1;
         setVisible(MESSAGE.slice(0, i));
-        if (i - 1 === CUE_AT) cueMusicOnce();
         later(tick, 36 + Math.random() * 42);
         return;
       }
@@ -93,7 +78,7 @@ export function CardIntro({ onReveal, onDone }: Props) {
   const onPointerDown = () => {
     if (begun || starting.current) return;
     starting.current = true;
-    unlockCardMusic();
+    startCardMusicFromTap();
     setBegun(true);
   };
 
