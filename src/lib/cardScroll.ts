@@ -1,0 +1,134 @@
+import { getLenis } from "./lenisStore";
+
+/**
+ * Autoscroll `#/w` zsynchronizowany z piosenką.
+ * Czasy w `CUES` są w sekundach piosenki (bez 1 s ciszy na początku pliku).
+ */
+
+/** Cisza wklejona na początku card-intro.mp3. */
+const LEAD_IN_SEC = 1;
+/** Odstęp nagłówka od dolnej krawędzi topbara. */
+const ANCHOR_GAP_PX = 24;
+/** „Bardzo powoli” po dojechaniu do celu. */
+const DRIFT_PX_PER_SEC = 22;
+
+type Cue = {
+  /** Sekunda piosenki, w której rusza zjazd. */
+  at: number;
+  /** Czas zjazdu w sekundach. */
+  duration: number;
+  /** `data-card-anchor` elementu, który ma wylądować pod topbarem. */
+  anchor: string;
+};
+
+const CUES: Cue[] = [{ at: 6, duration: 1.4, anchor: "work-heading" }];
+
+const easeOutQuart = (t: number) => 1 - (1 - t) ** 4;
+
+const BLOCKED_KEYS = new Set([
+  " ",
+  "ArrowUp",
+  "ArrowDown",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "End",
+]);
+
+function maxScroll() {
+  return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+}
+
+function anchorY(name: string): number | null {
+  const el = document.querySelector<HTMLElement>(`[data-card-anchor="${name}"]`);
+  if (!el) return null;
+  const topbar = document.querySelector<HTMLElement>("[data-topbar]");
+  const offset = (topbar?.getBoundingClientRect().bottom ?? 0) + ANCHOR_GAP_PX;
+  return el.getBoundingClientRect().top + window.scrollY - offset;
+}
+
+function setScroll(y: number) {
+  const clamped = Math.min(maxScroll(), Math.max(0, y));
+  const lenis = getLenis();
+  if (lenis) lenis.scrollTo(clamped, { immediate: true, force: true });
+  else window.scrollTo(0, clamped);
+}
+
+let running = false;
+
+export function runCardScroll(audio: HTMLAudioElement) {
+  if (running) return;
+  running = true;
+
+  // stopPropagation — Lenis słucha wheel/touch na window i inaczej by się szarpał.
+  const block = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const blockKeys = (e: KeyboardEvent) => {
+    if (!BLOCKED_KEYS.has(e.key)) return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const opts: AddEventListenerOptions = { passive: false, capture: true };
+  window.addEventListener("wheel", block, opts);
+  window.addEventListener("touchmove", block, opts);
+  window.addEventListener("keydown", blockKeys, opts);
+
+  // Płynny zegar: currentTime w Safari skacze co kilkadziesiąt ms.
+  let clockAudio = audio.currentTime;
+  let clockPerf = performance.now();
+  const songTime = () => {
+    const now = performance.now();
+    const est = audio.paused ? clockAudio : clockAudio + (now - clockPerf) / 1000;
+    if (Math.abs(audio.currentTime - est) > 0.12) {
+      clockAudio = audio.currentTime;
+      clockPerf = now;
+      return clockAudio - LEAD_IN_SEC;
+    }
+    return est - LEAD_IN_SEC;
+  };
+
+  let cueIndex = -1;
+  let fromY = 0;
+  let toY = 0;
+  let restY = 0;
+  let restAt = 0;
+  let raf = 0;
+
+  const release = () => {
+    cancelAnimationFrame(raf);
+    window.removeEventListener("wheel", block, opts);
+    window.removeEventListener("touchmove", block, opts);
+    window.removeEventListener("keydown", blockKeys, opts);
+    audio.removeEventListener("ended", release);
+    running = false;
+  };
+  audio.addEventListener("ended", release);
+
+  const tick = () => {
+    const t = songTime();
+
+    const next = CUES[cueIndex + 1];
+    if (next && t >= next.at) {
+      cueIndex += 1;
+      fromY = window.scrollY;
+      toY = anchorY(next.anchor) ?? fromY;
+    }
+
+    const cue = CUES[cueIndex];
+    if (cue) {
+      const p = (t - cue.at) / cue.duration;
+      if (p < 1) {
+        setScroll(fromY + (toY - fromY) * easeOutQuart(Math.max(0, p)));
+        restY = toY;
+        restAt = cue.at + cue.duration;
+      } else {
+        setScroll(restY + (t - restAt) * DRIFT_PX_PER_SEC);
+      }
+    }
+
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}

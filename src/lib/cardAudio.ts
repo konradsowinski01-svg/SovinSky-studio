@@ -1,8 +1,10 @@
 /**
  * `#/w` — zwykły play() w geście tapnięcia.
- * Opóźnienie 1100 ms jest wklejone w plik jako cisza: Safari blokuje
+ * Opóźnienie 1000 ms jest wklejone w plik jako cisza: Safari blokuje
  * dźwięk odpalany/odciszany z timera poza gestem.
  */
+
+import { runCardScroll } from "./cardScroll";
 
 const SRC = `${import.meta.env.BASE_URL}card-intro.mp3`;
 
@@ -25,8 +27,13 @@ export function startCardMusicFromTap(): void {
 
   const playAttempt = a.play();
   if (playAttempt) {
-    void playAttempt.catch(() => {
-      started = false;
-    });
+    void playAttempt.then(
+      () => runCardScroll(a),
+      () => {
+        started = false;
+      },
+    );
+  } else {
+    runCardScroll(a);
   }
 }

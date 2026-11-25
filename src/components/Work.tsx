@@ -7,7 +7,7 @@ import styles from "./Work.module.css";
 export function Work() {
   return (
     <section id="work" className={styles.work} aria-label="Wybrane projekty">
-      <div className={styles.head}>
+      <div className={styles.head} data-card-anchor="work-heading">
         <LiquidHeading text="Wybrane prace" className={styles.heading} />
         <RollLink href="#/portfolio" arrow className={styles.showAll}>
           pokaż wszystkie
