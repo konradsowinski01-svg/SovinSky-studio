@@ -10,6 +10,9 @@ export const CARD_MUSIC_END = 3 * 60 + 10;
 const TARGET_VOL = 0.42;
 const FADE_IN_MS = 1600;
 const FADE_OUT_MS = (CARD_MUSIC_END - CARD_MUSIC_FADE_AT) * 1000;
+/** Stała długość wycinka od START — niezależna od kapryśnego currentTime przy starcie. */
+const CLIP_TO_FADE_MS = (CARD_MUSIC_FADE_AT - CARD_MUSIC_START) * 1000;
+const CLIP_TO_END_MS = (CARD_MUSIC_END - CARD_MUSIC_START) * 1000;
 export const CARD_MUSIC_TAP_DELAY_MS = 1130;
 
 let audio: HTMLAudioElement | null = null;
@@ -17,10 +20,12 @@ let ctx: AudioContext | null = null;
 let gain: GainNode | null = null;
 let routed = false;
 let started = false;
+let fadingOut = false;
 let readyPromise: Promise<void> | null = null;
 let startTimer = 0;
 let fadeTimer = 0;
 let endTimer = 0;
+let watchRaf = 0;
 
 function ensureAudio(): HTMLAudioElement {
   if (audio) return audio;
@@ -84,6 +89,10 @@ function clearClipTimers() {
     window.clearTimeout(endTimer);
     endTimer = 0;
   }
+  if (watchRaf) {
+    cancelAnimationFrame(watchRaf);
+    watchRaf = 0;
+  }
 }
 
 function setGainNow(value: number) {
@@ -96,7 +105,7 @@ function rampGainTo(value: number, ms: number) {
   if (!ctx || !gain) return;
   const now = ctx.currentTime;
   const dur = Math.max(0.05, ms / 1000);
-  const from = gain.gain.value;
+  const from = Math.max(0, gain.gain.value);
   gain.gain.cancelScheduledValues(now);
   gain.gain.setValueAtTime(from, now);
   gain.gain.linearRampToValueAtTime(value, now + dur);
@@ -104,6 +113,7 @@ function rampGainTo(value: number, ms: number) {
 
 function finishClip(el: HTMLAudioElement) {
   clearClipTimers();
+  fadingOut = false;
   setGainNow(0);
   el.pause();
   try {
@@ -113,48 +123,76 @@ function finishClip(el: HTMLAudioElement) {
   }
 }
 
-/** Fade-out od FADE_AT → END na GainNode + timerach (nie na HTML volume). */
+function beginFadeOut() {
+  if (fadingOut) return;
+  fadingOut = true;
+  rampGainTo(0, FADE_OUT_MS);
+}
+
+/**
+ * Timery od momentu startu wycinka (wall-clock) + watchdog na currentTime.
+ * Nie liczymy msUntil(END - currentTime) gdy currentTime bywa jeszcze 0 po seeku.
+ */
 function armClipEnvelope(el: HTMLAudioElement) {
   clearClipTimers();
-
-  const msUntil = (target: number) =>
-    Math.max(0, (target - el.currentTime) * 1000);
+  fadingOut = false;
 
   fadeTimer = window.setTimeout(() => {
     fadeTimer = 0;
-    rampGainTo(0, FADE_OUT_MS);
-  }, msUntil(CARD_MUSIC_FADE_AT));
+    beginFadeOut();
+  }, CLIP_TO_FADE_MS);
 
   endTimer = window.setTimeout(() => {
     endTimer = 0;
     finishClip(el);
-  }, msUntil(CARD_MUSIC_END) + 40);
+  }, CLIP_TO_END_MS);
+
+  const watch = () => {
+    if (!started) {
+      watchRaf = 0;
+      return;
+    }
+    const t = el.currentTime;
+    // Dopiero gdy jesteśmy w okolicy wycinka — chroni przed fałszywym currentTime=0
+    if (t >= CARD_MUSIC_FADE_AT - 0.05) beginFadeOut();
+    if (t >= CARD_MUSIC_END) {
+      finishClip(el);
+      return;
+    }
+    if (!el.paused || fadingOut) {
+      watchRaf = requestAnimationFrame(watch);
+      return;
+    }
+    watchRaf = 0;
+  };
+  watchRaf = requestAnimationFrame(watch);
+}
+
+function seekToStart(el: HTMLAudioElement): Promise<void> {
+  return new Promise((resolve) => {
+    const done = () => {
+      el.removeEventListener("seeked", done);
+      resolve();
+    };
+    el.addEventListener("seeked", done);
+    try {
+      el.currentTime = CARD_MUSIC_START;
+    } catch {
+      /* ignore */
+    }
+    window.setTimeout(done, 220);
+  });
 }
 
 async function playClip(): Promise<void> {
   const { ctx: audioCtx, el } = ensureGraph();
   if (audioCtx.state === "suspended") await audioCtx.resume();
   await whenReady(el);
+  await seekToStart(el);
 
-  try {
-    el.currentTime = CARD_MUSIC_START;
-  } catch {
-    /* ignore */
-  }
-  if (Math.abs(el.currentTime - CARD_MUSIC_START) > 0.35) {
-    await new Promise<void>((r) => {
-      const onSeek = () => {
-        el.removeEventListener("seeked", onSeek);
-        r();
-      };
-      el.addEventListener("seeked", onSeek);
-      try {
-        el.currentTime = CARD_MUSIC_START;
-      } catch {
-        /* ignore */
-      }
-      window.setTimeout(r, 180);
-    });
+  // Jeśli seek nadal nie złapał — jeszcze raz
+  if (Math.abs(el.currentTime - CARD_MUSIC_START) > 0.75) {
+    await seekToStart(el);
   }
 
   el.muted = false;
@@ -162,17 +200,7 @@ async function playClip(): Promise<void> {
   await el.play();
   started = true;
   rampGainTo(TARGET_VOL, FADE_IN_MS);
-  // currentTime bywa niestabilne tuż po play — dograj envelope w następnej klatce
-  requestAnimationFrame(() => {
-    if (Math.abs(el.currentTime - CARD_MUSIC_START) > 1.5) {
-      try {
-        el.currentTime = CARD_MUSIC_START;
-      } catch {
-        /* ignore */
-      }
-    }
-    armClipEnvelope(el);
-  });
+  armClipEnvelope(el);
 }
 
 /** Preload na starcie czarnego ekranu. */
