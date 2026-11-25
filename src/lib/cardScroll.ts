@@ -25,6 +25,12 @@ type Cue = {
   offsetPx?: number;
   /** Relatywny zjazd od bieżącej pozycji (np. +150). */
   deltaPx?: number;
+  /** Wróć na samą górę strony. */
+  toTop?: boolean;
+  /** Po dojechaniu nie dryfuj dalej. */
+  hold?: boolean;
+  /** Krzywa: out = szybki zjazd + miękki stop, inout = wolniejszy powrót. */
+  ease?: "out" | "inout";
 };
 
 const CUES: Cue[] = [
@@ -33,10 +39,14 @@ const CUES: Cue[] = [
   { at: 11, duration: 1.4, anchor: "kampania-sms", align: "center" },
   { at: 13.4, duration: 1.4, anchor: "about", align: "center", offsetPx: -220 },
   { at: 16, duration: 1.4, deltaPx: 400 },
-  { at: 18.5, duration: 1.4, deltaPx: 800 },
+  // 18.5 − 50 ms; po dojechaniu (+1.4) + 1 s pauzy → powrót na górę
+  { at: 18.45, duration: 1.4, deltaPx: 800 },
+  { at: 20.85, duration: 3.0, toTop: true, hold: true, ease: "inout" },
 ];
 
 const easeOutQuart = (t: number) => 1 - (1 - t) ** 4;
+const easeInOutCubic = (t: number) =>
+  t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
 const BLOCKED_KEYS = new Set([
   " ",
@@ -64,6 +74,7 @@ function layoutTop(el: HTMLElement): number {
 }
 
 function anchorY(cue: Cue, fromY: number): number | null {
+  if (cue.toTop) return 0;
   if (cue.deltaPx != null) return fromY + cue.deltaPx;
   if (!cue.anchor) return null;
   const el = document.querySelector<HTMLElement>(`[data-card-anchor="${cue.anchor}"]`);
@@ -126,8 +137,11 @@ export function runCardScroll(audio: HTMLAudioElement) {
   let restY = 0;
   let restAt = 0;
   let raf = 0;
+  let done = false;
 
   const release = () => {
+    if (done) return;
+    done = true;
     cancelAnimationFrame(raf);
     window.removeEventListener("wheel", block, opts);
     window.removeEventListener("touchmove", block, opts);
@@ -138,6 +152,7 @@ export function runCardScroll(audio: HTMLAudioElement) {
   audio.addEventListener("ended", release);
 
   const tick = () => {
+    if (done) return;
     const t = songTime();
 
     const next = CUES[cueIndex + 1];
@@ -151,15 +166,19 @@ export function runCardScroll(audio: HTMLAudioElement) {
     if (cue) {
       const p = (t - cue.at) / cue.duration;
       if (p < 1) {
-        setScroll(fromY + (toY - fromY) * easeOutQuart(Math.max(0, p)));
+        const e = cue.ease === "inout" ? easeInOutCubic : easeOutQuart;
+        setScroll(fromY + (toY - fromY) * e(Math.max(0, p)));
         restY = toY;
         restAt = cue.at + cue.duration;
+      } else if (cue.hold || cue.toTop) {
+        setScroll(toY);
+        if (cue.toTop) release();
       } else {
         setScroll(restY + (t - restAt) * DRIFT_PX_PER_SEC);
       }
     }
 
-    raf = requestAnimationFrame(tick);
+    if (!done) raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
 }
