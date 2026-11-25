@@ -18,11 +18,13 @@ type Cue = {
   /** Czas zjazdu w sekundach. */
   duration: number;
   /** `data-card-anchor` elementu docelowego. */
-  anchor: string;
+  anchor?: string;
   /** `top` — tuż pod topbarem, `center` — środek elementu na środku ekranu. */
-  align: "top" | "center";
+  align?: "top" | "center";
   /** Korekta pozycji w px (ujemne = wyżej). */
   offsetPx?: number;
+  /** Relatywny zjazd od bieżącej pozycji (np. +150). */
+  deltaPx?: number;
 };
 
 const CUES: Cue[] = [
@@ -30,6 +32,7 @@ const CUES: Cue[] = [
   { at: 8.8, duration: 1.4, anchor: "firma-online", align: "top" },
   { at: 11, duration: 1.4, anchor: "kampania-sms", align: "center" },
   { at: 13.4, duration: 1.4, anchor: "about", align: "center", offsetPx: -220 },
+  { at: 16, duration: 1.4, deltaPx: 150 },
 ];
 
 const easeOutQuart = (t: number) => 1 - (1 - t) ** 4;
@@ -59,7 +62,9 @@ function layoutTop(el: HTMLElement): number {
   return top;
 }
 
-function anchorY(cue: Cue): number | null {
+function anchorY(cue: Cue, fromY: number): number | null {
+  if (cue.deltaPx != null) return fromY + cue.deltaPx;
+  if (!cue.anchor) return null;
   const el = document.querySelector<HTMLElement>(`[data-card-anchor="${cue.anchor}"]`);
   if (!el) return null;
   const top = layoutTop(el);
@@ -138,7 +143,7 @@ export function runCardScroll(audio: HTMLAudioElement) {
     if (next && t >= next.at) {
       cueIndex += 1;
       fromY = window.scrollY;
-      toY = anchorY(next) ?? fromY;
+      toY = anchorY(next, fromY) ?? fromY;
     }
 
     const cue = CUES[cueIndex];
