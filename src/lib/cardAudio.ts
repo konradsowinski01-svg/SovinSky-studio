@@ -12,8 +12,11 @@ export function armCardMusic(): () => void {
   preload.preload = "auto";
   return () => {
     if (timer) window.clearTimeout(timer);
-    if (audio && !audio.paused) audio.pause();
   };
+}
+
+export function isCardMusicPlaying(): boolean {
+  return Boolean(audio && !audio.paused && !audio.muted);
 }
 
 export function startCardMusicFromTap(): void {
