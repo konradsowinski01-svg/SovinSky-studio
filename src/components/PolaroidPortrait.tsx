@@ -6,9 +6,7 @@ const SRC = `${import.meta.env.BASE_URL}about-portrait.jpg`;
 const DURATION = 2800;
 /** Crossfade particle mosaic → crisp bake only at the end. */
 const SETTLE_FADE = 0.88;
-const DISSOLVE_R = 36;
-const ORBIT_COUNT = 72;
-const SAND_COUNT = 280;
+const ORBIT_COUNT = 36;
 
 type Vert = { dx: number; dy: number };
 
@@ -40,32 +38,6 @@ type OrbitShard = {
   verts: Vert[];
   spin: number;
   rot0: number;
-  scale: number;
-};
-
-type DissolveBit = {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  r: number;
-  g: number;
-  b: number;
-  verts: Vert[];
-  rot: number;
-  spin: number;
-  scale: number;
-};
-
-type SandGrain = {
-  ox: number;
-  oy: number;
-  seed: number;
-  verts: Vert[];
-  rot: number;
-  spin: number;
   scale: number;
 };
 
@@ -274,7 +246,7 @@ function sampleGrains(
   const ctx = baked.getContext("2d", { willReadFrequently: true });
   if (!ctx) return [];
   const data = ctx.getImageData(0, 0, baked.width, baked.height).data;
-  const step = Math.max(2, Math.floor(2.2 * dpr));
+  const step = Math.max(5, Math.floor(5.5 * dpr));
   const cell = step / dpr;
   const grains: Grain[] = [];
   let i = 0;
@@ -284,7 +256,7 @@ function sampleGrains(
       const idx = (py * baked.width + px) * 4;
       if (data[idx + 3] < 20) continue;
       const seed = i * 17.3 + hash(i * 0.13) * 40 + 2.1;
-      if (hash(seed + 11) < 0.12) {
+      if (hash(seed + 11) < 0.28) {
         i += 1;
         continue;
       }
@@ -309,7 +281,7 @@ function sampleGrains(
     }
   }
 
-  for (let k = 0; k < 160; k++) {
+  for (let k = 0; k < 48; k++) {
     const seed = k * 23.9 + 9;
     const pick = grains[Math.floor(hash(seed) * Math.max(grains.length, 1))];
     if (!pick) continue;
@@ -380,27 +352,6 @@ function localToScreen(
   };
 }
 
-/** Screen point → local bake coords (unwrap CSS rotate(-2deg)). */
-function screenToLocal(
-  clientX: number,
-  clientY: number,
-  rect: DOMRect,
-  localW: number,
-  localH: number,
-) {
-  const rad = (2 * Math.PI) / 180;
-  const cx = rect.left + rect.width / 2;
-  const cy = rect.top + rect.height / 2;
-  const dx = clientX - cx;
-  const dy = clientY - cy;
-  const ux = dx * Math.cos(rad) - dy * Math.sin(rad);
-  const uy = dx * Math.sin(rad) + dy * Math.cos(rad);
-  return {
-    lx: localW / 2 + (ux / rect.width) * localW,
-    ly: localH / 2 + (uy / rect.height) * localH,
-  };
-}
-
 type Props = {
   alt?: string;
   className?: string;
@@ -426,22 +377,13 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
     let started = false;
     let idle = false;
     let baked: HTMLCanvasElement | null = null;
-    let bakeData: ImageData | null = null;
     let grains: Grain[] = [];
     let orbiters: OrbitShard[] = [];
-    let dissolve: DissolveBit[] = [];
-    let sandPool: SandGrain[] = [];
     let cssW = 0;
     let cssH = 0;
     let dpr = 1;
     let viewW = 0;
     let viewH = 0;
-    let pointerOn = false;
-    let ptrX = 0;
-    let ptrY = 0;
-    let ptrLx = 0;
-    let ptrLy = 0;
-    let lastSpawn = 0;
     let idleStart = 0;
 
     const photo = new Image();
@@ -473,125 +415,10 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       octx.setTransform(odpr, 0, 0, odpr, 0, 0);
     };
 
-    const sampleColorAt = (lx: number, ly: number) => {
-      if (!bakeData) return { r: 220, g: 180, b: 120 };
-      const px = Math.max(0, Math.min(bakeData.width - 1, Math.floor(lx * dpr)));
-      const py = Math.max(0, Math.min(bakeData.height - 1, Math.floor(ly * dpr)));
-      const i = (py * bakeData.width + px) * 4;
-      return { r: bakeData.data[i], g: bakeData.data[i + 1], b: bakeData.data[i + 2] };
-    };
-
-    const ensureSandPool = () => {
-      if (sandPool.length) return;
-      for (let i = 0; i < SAND_COUNT; i++) {
-        const seed = i * 13.7 + 4.2;
-        const cell = 0.7 + hash(seed) * 1.1;
-        sandPool.push({
-          ox: (hash(seed + 1) - 0.5) * 2,
-          oy: (hash(seed + 2) - 0.5) * 2,
-          seed,
-          verts: makeShard(seed + 3, cell),
-          rot: hash(seed + 4) * Math.PI * 2,
-          spin: (hash(seed + 5) - 0.5) * 0.12,
-          scale: 0.4 + hash(seed + 6) * 0.55,
-        });
-      }
-    };
-
-    /** Soften photo under cursor, then pack the disc with living sand shards. */
-    const paintPolaroid = (now: number) => {
+    const paintPolaroid = () => {
       if (!baked) return;
       ctx.clearRect(0, 0, cssW, cssH);
       ctx.drawImage(baked, 0, 0, cssW, cssH);
-      if (!pointerOn) return;
-
-      ensureSandPool();
-      const t = now * 0.001;
-
-      // soft fade of sharp photo — replaced visually by sand, not a see-through hole
-      ctx.save();
-      ctx.globalCompositeOperation = "destination-out";
-      const fade = ctx.createRadialGradient(ptrLx, ptrLy, 0, ptrLx, ptrLy, DISSOLVE_R);
-      fade.addColorStop(0, "rgba(0,0,0,0.92)");
-      fade.addColorStop(0.7, "rgba(0,0,0,0.55)");
-      fade.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = fade;
-      ctx.beginPath();
-      ctx.arc(ptrLx, ptrLy, DISSOLVE_R, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(ptrLx, ptrLy, DISSOLVE_R, 0, Math.PI * 2);
-      ctx.clip();
-
-      for (let i = 0; i < sandPool.length; i++) {
-        const g = sandPool[i];
-        const ang = hash(g.seed + 8) * Math.PI * 2;
-        const dist = Math.sqrt(hash(g.seed + 9)) * DISSOLVE_R;
-        const jx = (fbm(g.seed + t * 2.4) - 0.5) * 5.5;
-        const jy = (fbm(g.seed + 20 + t * 2.1) - 0.5) * 5.5;
-        const lx = ptrLx + Math.cos(ang) * dist + g.ox + jx;
-        const ly = ptrLy + Math.sin(ang) * dist + g.oy + jy;
-        const col = sampleColorAt(
-          ptrLx + Math.cos(ang) * dist,
-          ptrLy + Math.sin(ang) * dist,
-        );
-        const edge = Math.min(1, (DISSOLVE_R - dist) / 8);
-        const alpha = 0.55 + edge * 0.4;
-        ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${alpha.toFixed(3)})`;
-        drawShard(ctx, lx, ly, g.verts, g.scale, g.rot + t * g.spin * 10);
-      }
-
-      // denser speck fill so no empty gaps show through
-      for (let i = 0; i < 160; i++) {
-        const seed = i * 9.1 + t * 3;
-        const ang = hash(seed) * Math.PI * 2;
-        const dist = Math.sqrt(hash(seed + 1)) * DISSOLVE_R * 0.98;
-        const lx = ptrLx + Math.cos(ang) * dist + (fbm(seed + t) - 0.5) * 3;
-        const ly = ptrLy + Math.sin(ang) * dist + (fbm(seed + 5 + t) - 0.5) * 3;
-        const col = sampleColorAt(lx, ly);
-        const sz = 0.8 + hash(seed + 2) * 1.6;
-        ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${(0.55 + hash(seed + 3) * 0.4).toFixed(3)})`;
-        ctx.fillRect(lx, ly, sz, sz);
-      }
-      ctx.restore();
-    };
-
-    const spawnDissolveBits = (now: number) => {
-      if (!pointerOn || now - lastSpawn < 28) return;
-      lastSpawn = now;
-      const live = wrap.getBoundingClientRect();
-      for (let n = 0; n < 3; n++) {
-        const seed = now * 0.01 + n * 7.3;
-        const ang = hash(seed) * Math.PI * 2;
-        const dist = hash(seed + 1) * DISSOLVE_R * 0.7;
-        const lx = ptrLx + Math.cos(ang) * dist;
-        const ly = ptrLy + Math.sin(ang) * dist;
-        if (lx < 0 || ly < 0 || lx > cssW || ly > cssH) continue;
-        const col = sampleColorAt(lx, ly);
-        const screen = localToScreen(lx, ly, live, cssW, cssH);
-        const outAng = Math.atan2(ly - ptrLy, lx - ptrLx) + (hash(seed + 2) - 0.5) * 0.9;
-        const speed = 0.25 + hash(seed + 3) * 0.9;
-        const cell = 0.8 + hash(seed + 4) * 1.0;
-        dissolve.push({
-          x: screen.x,
-          y: screen.y,
-          vx: Math.cos(outAng) * speed,
-          vy: Math.sin(outAng) * speed - 0.15,
-          life: 0,
-          maxLife: 380 + hash(seed + 5) * 320,
-          r: col.r,
-          g: col.g,
-          b: col.b,
-          verts: makeShard(seed + 6, cell),
-          rot: hash(seed + 7) * Math.PI * 2,
-          spin: (hash(seed + 8) - 0.5) * 0.16,
-          scale: 0.4 + hash(seed + 9) * 0.5,
-        });
-      }
-      if (dissolve.length > 140) dissolve.splice(0, dissolve.length - 140);
     };
 
     const drawOrbiters = (now: number, live: DOMRect) => {
@@ -612,39 +439,12 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       }
     };
 
-    const drawDissolveBits = (dt: number) => {
-      for (let i = dissolve.length - 1; i >= 0; i--) {
-        const b = dissolve[i];
-        b.life += dt;
-        b.x += b.vx * (dt * 0.06);
-        b.y += b.vy * (dt * 0.06);
-        b.vy += 0.012 * dt * 0.06;
-        b.rot += b.spin * dt * 0.06;
-        const u = b.life / b.maxLife;
-        if (u >= 1) {
-          dissolve.splice(i, 1);
-          continue;
-        }
-        const alpha = (1 - u) * 0.85;
-        octx.fillStyle = `rgba(${b.r},${b.g},${b.b},${alpha.toFixed(3)})`;
-        drawShard(octx, b.x, b.y, b.verts, b.scale * (0.7 + (1 - u) * 0.5), b.rot);
-      }
-    };
-
-    let lastIdleTs = 0;
     const idleTick = (now: number) => {
       if (cancelled || !baked || !idle) return;
-      const dt = lastIdleTs ? Math.min(40, now - lastIdleTs) : 16;
-      lastIdleTs = now;
       const live = wrap.getBoundingClientRect();
-
       sizeOverlay(false);
       octx.clearRect(0, 0, viewW, viewH);
       drawOrbiters(now, live);
-
-      paintPolaroid(now);
-      if (pointerOn) spawnDissolveBits(now);
-      drawDissolveBits(dt);
       raf = requestAnimationFrame(idleTick);
     };
 
@@ -653,13 +453,9 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       wrap.dataset.state = "done";
       idle = true;
       idleStart = performance.now();
-      lastIdleTs = 0;
+      paintPolaroid();
       orbiters = buildOrbitShards(ORBIT_COUNT);
-      const bctx = baked.getContext("2d", { willReadFrequently: true });
-      bakeData = bctx ? bctx.getImageData(0, 0, baked.width, baked.height) : null;
       overlay.classList.add(styles.overlayLive);
-      ensureSandPool();
-      paintPolaroid(performance.now());
       raf = requestAnimationFrame(idleTick);
     };
 
@@ -671,9 +467,7 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
         ctx.clearRect(0, 0, cssW, cssH);
         wrap.dataset.state = "pending";
       } else if (idle) {
-        const bctx = baked.getContext("2d", { willReadFrequently: true });
-        bakeData = bctx ? bctx.getImageData(0, 0, baked.width, baked.height) : null;
-        paintPolaroid(performance.now());
+        paintPolaroid();
       }
     };
 
@@ -683,8 +477,7 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
 
       if (reduceMotion) {
         wrap.dataset.state = "done";
-        ctx.clearRect(0, 0, cssW, cssH);
-        ctx.drawImage(baked, 0, 0, cssW, cssH);
+        paintPolaroid();
         return;
       }
 
@@ -720,9 +513,9 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
             const t = easeOutCubic(local);
             const target = localToScreen(g.lx, g.ly, live, cssW, cssH);
             const wobble = (1 - t) * (1 - t);
-            const jx = (fbm(g.seed + elapsed * 0.0024) - 0.5) * wobble * 48;
-            const jy = (fbm(g.seed + 40 + elapsed * 0.0019) - 0.5) * wobble * 42;
-            const bend = Math.sin(local * Math.PI) * (hash(g.seed + 3) - 0.5) * 70 * (1 - t);
+            const jx = (hash(g.seed + elapsed * 0.02) - 0.5) * wobble * 42;
+            const jy = (hash(g.seed + 40 + elapsed * 0.017) - 0.5) * wobble * 36;
+            const bend = Math.sin(local * Math.PI) * (hash(g.seed + 3) - 0.5) * 55 * (1 - t);
             const x = g.x0 + (target.x - g.x0) * t + jx + bend;
             const y = g.y0 + (target.y - g.y0) * t + jy - bend * 0.35;
             const flight = 1 - t;
@@ -745,6 +538,7 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
     };
 
     const onReady = () => {
+      if (!photo.naturalWidth) return;
       setup();
       requestAnimationFrame(() => {
         window.setTimeout(() => {
@@ -755,25 +549,6 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
 
     photo.onload = onReady;
     if (photo.complete) onReady();
-
-    const onPointerMove = (e: PointerEvent) => {
-      if (!idle) return;
-      pointerOn = true;
-      ptrX = e.clientX;
-      ptrY = e.clientY;
-      const live = wrap.getBoundingClientRect();
-      const local = screenToLocal(ptrX, ptrY, live, cssW, cssH);
-      ptrLx = local.lx;
-      ptrLy = local.ly;
-    };
-
-    const onPointerLeave = () => {
-      pointerOn = false;
-    };
-
-    wrap.addEventListener("pointermove", onPointerMove);
-    wrap.addEventListener("pointerenter", onPointerMove);
-    wrap.addEventListener("pointerleave", onPointerLeave);
 
     const onResize = () => {
       setup();
@@ -786,9 +561,6 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       idle = false;
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
-      wrap.removeEventListener("pointermove", onPointerMove);
-      wrap.removeEventListener("pointerenter", onPointerMove);
-      wrap.removeEventListener("pointerleave", onPointerLeave);
     };
   }, []);
 

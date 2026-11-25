@@ -13,9 +13,9 @@ npm run dev
 
 1. Repo Settings → Pages → Source: **GitHub Actions**
 2. Push na `main` odpala workflow `.github/workflows/deploy.yml`
-3. Adres: `https://<user>.github.io/SovinSky-studio/`
+3. Adres: `https://<user>.github.io/SowinSky-studio/`
 
-`vite.config.ts` ma `base: "/SovinSky-studio/"` — zmień, jeśli nazwa repo będzie inna.
+`vite.config.ts` ustawia `base: "/SowinSky-studio/"` tylko przy `build`; lokalnie zostaje `/`.
 
 ## Treści do podmiany
 
