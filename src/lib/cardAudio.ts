@@ -1,14 +1,18 @@
-/** `#/w` — najprostszy możliwy play w geście tapnięcia. */
+/** `#/w` — play w geście, słyszalne dopiero po DELAY_MS. */
 
 const SRC = `${import.meta.env.BASE_URL}card-intro.mp3`;
+const DELAY_MS = 1100;
 
+let audio: HTMLAudioElement | null = null;
 let started = false;
+let timer = 0;
 
 export function armCardMusic(): () => void {
-  // lekki preload
   const preload = new Audio(SRC);
   preload.preload = "auto";
-  return () => undefined;
+  return () => {
+    if (timer) window.clearTimeout(timer);
+  };
 }
 
 export function startCardMusicFromTap(): void {
@@ -16,16 +20,29 @@ export function startCardMusicFromTap(): void {
   started = true;
 
   const a = new Audio(SRC);
+  audio = a;
   a.preload = "auto";
   a.volume = 1;
-  a.muted = false;
+  a.muted = true;
   a.setAttribute("playsinline", "true");
   a.setAttribute("webkit-playsinline", "true");
 
-  const playAttempt = a.play();
-  if (playAttempt) {
-    void playAttempt.catch(() => {
-      started = false;
-    });
-  }
+  // Jedyny play() — w geście. Potem tylko unmute + seek, bez pause/play.
+  void a.play().catch(() => {
+    started = false;
+  });
+
+  timer = window.setTimeout(() => {
+    timer = 0;
+    try {
+      a.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+    a.muted = false;
+    a.volume = 1;
+    if (a.paused) {
+      void a.play().catch(() => undefined);
+    }
+  }, DELAY_MS);
 }
