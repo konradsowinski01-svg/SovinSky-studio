@@ -10,7 +10,8 @@ function getAudio(): HTMLAudioElement {
   if (el) return el;
   el = new Audio(SRC);
   el.preload = "auto";
-  el.playsInline = true;
+  el.setAttribute("playsinline", "true");
+  el.setAttribute("webkit-playsinline", "true");
   return el;
 }
 
