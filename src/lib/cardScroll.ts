@@ -17,11 +17,17 @@ type Cue = {
   at: number;
   /** Czas zjazdu w sekundach. */
   duration: number;
-  /** `data-card-anchor` elementu, który ma wylądować pod topbarem. */
+  /** `data-card-anchor` elementu docelowego. */
   anchor: string;
+  /** `top` — tuż pod topbarem, `center` — środek elementu na środku ekranu. */
+  align: "top" | "center";
 };
 
-const CUES: Cue[] = [{ at: 6, duration: 1.4, anchor: "work-heading" }];
+const CUES: Cue[] = [
+  { at: 6, duration: 1.4, anchor: "work-heading", align: "top" },
+  { at: 9, duration: 1.4, anchor: "firma-online", align: "top" },
+  { at: 11, duration: 1.4, anchor: "kampania-sms", align: "center" },
+];
 
 const easeOutQuart = (t: number) => 1 - (1 - t) ** 4;
 
@@ -39,12 +45,27 @@ function maxScroll() {
   return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
 }
 
-function anchorY(name: string): number | null {
-  const el = document.querySelector<HTMLElement>(`[data-card-anchor="${name}"]`);
+/** Pozycja z layoutu (offsetTop), nie z rect — kafelki mają scrollowany transform y. */
+function layoutTop(el: HTMLElement): number {
+  let top = 0;
+  let node: HTMLElement | null = el;
+  while (node) {
+    top += node.offsetTop;
+    node = node.offsetParent as HTMLElement | null;
+  }
+  return top;
+}
+
+function anchorY(cue: Cue): number | null {
+  const el = document.querySelector<HTMLElement>(`[data-card-anchor="${cue.anchor}"]`);
   if (!el) return null;
+  const top = layoutTop(el);
+  if (cue.align === "center") {
+    return top + el.offsetHeight / 2 - window.innerHeight / 2;
+  }
   const topbar = document.querySelector<HTMLElement>("[data-topbar]");
   const offset = (topbar?.getBoundingClientRect().bottom ?? 0) + ANCHOR_GAP_PX;
-  return el.getBoundingClientRect().top + window.scrollY - offset;
+  return top - offset;
 }
 
 function setScroll(y: number) {
@@ -113,7 +134,7 @@ export function runCardScroll(audio: HTMLAudioElement) {
     if (next && t >= next.at) {
       cueIndex += 1;
       fromY = window.scrollY;
-      toY = anchorY(next.anchor) ?? fromY;
+      toY = anchorY(next) ?? fromY;
     }
 
     const cue = CUES[cueIndex];

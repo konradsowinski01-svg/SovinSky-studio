@@ -16,7 +16,12 @@ export function Work() {
 
       <div className={styles.list}>
         {projects.map((project, index) => (
-          <article key={project.slug} className={styles.proj} data-proj="">
+          <article
+            key={project.slug}
+            className={styles.proj}
+            data-proj=""
+            data-card-anchor={project.slug}
+          >
             <a
               className={styles.card}
               href="#contact"
