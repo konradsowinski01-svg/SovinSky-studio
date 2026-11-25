@@ -1,8 +1,8 @@
-/** Muzyka tylko dla `#/w` — wyłącznie wycinek 2:44–3:10, start przy tap. */
+/** Muzyka tylko dla `#/w` — wyłącznie wycinek 2:45–3:10, start przy tap. */
 
 const SRC = `${import.meta.env.BASE_URL}card-theme.mp3`;
 /** Stały fragment utworu — nic poza tym nie gra. */
-export const CARD_MUSIC_START = 2 * 60 + 44;
+export const CARD_MUSIC_START = 2 * 60 + 45;
 /** Początek wyciszania — do END trwa ~4 s. */
 export const CARD_MUSIC_FADE_AT = 3 * 60 + 6;
 export const CARD_MUSIC_END = 3 * 60 + 10;
