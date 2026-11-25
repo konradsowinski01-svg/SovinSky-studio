@@ -5,6 +5,7 @@ const DELAY_MS = 1130;
 
 let el: HTMLAudioElement | null = null;
 let timer = 0;
+let started = false;
 
 function getAudio(): HTMLAudioElement {
   if (el) return el;
@@ -23,29 +24,50 @@ export function armCardMusic(): () => void {
   };
 }
 
-/** Tap: odblokuj, po chwili play od 0. */
+/**
+ * Tap: cichy kick tylko do odblokowania autoplay,
+ * słyszalny play dopiero po DELAY_MS (jeden raz).
+ */
 export function startCardMusicFromTap(): void {
+  if (started) return;
   const a = getAudio();
   if (timer) window.clearTimeout(timer);
 
-  // Odblokowanie autoplay w geście użytkownika
-  a.muted = false;
-  a.volume = 1;
+  // Cichy unlock w geście — nie ma być słyszalny.
+  a.muted = true;
+  a.volume = 0;
+  try {
+    a.currentTime = 0;
+  } catch {
+    /* ignore */
+  }
   const kick = a.play();
   if (kick) {
     void kick
       .then(() => {
+        if (started) return;
         a.pause();
-        a.currentTime = 0;
+        try {
+          a.currentTime = 0;
+        } catch {
+          /* ignore */
+        }
       })
       .catch(() => undefined);
   }
 
   timer = window.setTimeout(() => {
     timer = 0;
+    started = true;
     a.muted = false;
     a.volume = 1;
-    a.currentTime = 0;
-    void a.play().catch(() => undefined);
+    try {
+      a.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+    void a.play().catch(() => {
+      started = false;
+    });
   }, DELAY_MS);
 }
