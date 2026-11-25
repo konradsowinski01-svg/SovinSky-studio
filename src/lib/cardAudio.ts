@@ -1,15 +1,19 @@
-/** Muzyka tylko dla `#/w`. Start od 2:45; cue ~1 s przed „zbudować”. */
+/** Muzyka tylko dla `#/w` — wyłącznie wycinek 2:44–3:10. */
 
 const SRC = `${import.meta.env.BASE_URL}card-theme.mp3`;
-export const CARD_MUSIC_START = 2 * 60 + 45;
+/** Stały fragment utworu — nic poza tym nie gra. */
+export const CARD_MUSIC_START = 2 * 60 + 44;
+export const CARD_MUSIC_END = 3 * 60 + 10;
 const TARGET_VOL = 0.42;
-const FADE_MS = 1600;
+const FADE_IN_MS = 1600;
+const FADE_OUT_MS = 900;
 
 let audio: HTMLAudioElement | null = null;
 let started = false;
 let fading = false;
 let unlocked = false;
 let readyPromise: Promise<void> | null = null;
+let endWatch: (() => void) | null = null;
 
 function ensure(): HTMLAudioElement {
   if (audio) return audio;
@@ -47,18 +51,56 @@ function whenReady(el: HTMLAudioElement): Promise<void> {
   return readyPromise;
 }
 
-function fadeIn(el: HTMLAudioElement) {
-  if (fading) return;
+function clearEndWatch() {
+  endWatch?.();
+  endWatch = null;
+}
+
+function fadeVolume(el: HTMLAudioElement, to: number, ms: number, onDone?: () => void) {
   fading = true;
   const t0 = performance.now();
   const from = el.volume;
   const tick = (now: number) => {
-    const t = Math.min(1, (now - t0) / FADE_MS);
-    el.volume = from + (TARGET_VOL - from) * (1 - (1 - t) ** 2);
-    if (t < 1) requestAnimationFrame(tick);
-    else fading = false;
+    const t = Math.min(1, (now - t0) / ms);
+    el.volume = from + (to - from) * (1 - (1 - t) ** 2);
+    if (t < 1) {
+      requestAnimationFrame(tick);
+      return;
+    }
+    fading = false;
+    onDone?.();
   };
   requestAnimationFrame(tick);
+}
+
+function stopAtEnd(el: HTMLAudioElement) {
+  clearEndWatch();
+  const finish = () => {
+    clearEndWatch();
+    el.pause();
+    try {
+      el.currentTime = CARD_MUSIC_START;
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const onTime = () => {
+    const left = CARD_MUSIC_END - el.currentTime;
+    if (left <= FADE_OUT_MS / 1000) {
+      el.removeEventListener("timeupdate", onTime);
+      if (!fading) {
+        fadeVolume(el, 0, Math.max(120, left * 1000), finish);
+      } else {
+        finish();
+      }
+      return;
+    }
+    if (el.currentTime >= CARD_MUSIC_END) finish();
+  };
+
+  el.addEventListener("timeupdate", onTime);
+  endWatch = () => el.removeEventListener("timeupdate", onTime);
 }
 
 async function seekAndPlay(): Promise<boolean> {
@@ -91,7 +133,8 @@ async function seekAndPlay(): Promise<boolean> {
     el.volume = 0;
     await el.play();
     started = true;
-    fadeIn(el);
+    stopAtEnd(el);
+    fadeVolume(el, TARGET_VOL, FADE_IN_MS);
     return true;
   } catch {
     return false;

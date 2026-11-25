@@ -7,7 +7,7 @@ import styles from "./CardIntro.module.css";
 const MESSAGE = "Miło Cię poznać, zobacz co możemy razem zbudować";
 /** Pierwszy znak ostatniego słowa. */
 const LAST_WORD_AT = MESSAGE.lastIndexOf("zbudować");
-/** Średni delay znaku — muzyka ~1 s przed „zbudować”. */
+/** Średni delay znaku — wycinek 2:44–3:10 ~1 s przed „zbudować”. */
 const CHAR_AVG_MS = 57;
 const MUSIC_LEAD_MS = 1000;
 const CUE_AT = Math.max(0, LAST_WORD_AT - Math.ceil(MUSIC_LEAD_MS / CHAR_AVG_MS));
