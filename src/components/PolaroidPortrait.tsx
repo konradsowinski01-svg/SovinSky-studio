@@ -473,25 +473,6 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       octx.setTransform(odpr, 0, 0, odpr, 0, 0);
     };
 
-    const paintPolaroid = (hole: boolean) => {
-      if (!baked) return;
-      ctx.clearRect(0, 0, cssW, cssH);
-      ctx.drawImage(baked, 0, 0, cssW, cssH);
-      if (!hole || !pointerOn) return;
-
-      ctx.save();
-      ctx.globalCompositeOperation = "destination-out";
-      const grad = ctx.createRadialGradient(ptrLx, ptrLy, 0, ptrLx, ptrLy, DISSOLVE_R);
-      grad.addColorStop(0, "rgba(0,0,0,1)");
-      grad.addColorStop(0.55, "rgba(0,0,0,0.85)");
-      grad.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(ptrLx, ptrLy, DISSOLVE_R, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    };
-
     const sampleColorAt = (lx: number, ly: number) => {
       if (!bakeData) return { r: 220, g: 180, b: 120 };
       const px = Math.max(0, Math.min(bakeData.width - 1, Math.floor(lx * dpr)));
@@ -500,39 +481,117 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       return { r: bakeData.data[i], g: bakeData.data[i + 1], b: bakeData.data[i + 2] };
     };
 
+    const ensureSandPool = () => {
+      if (sandPool.length) return;
+      for (let i = 0; i < SAND_COUNT; i++) {
+        const seed = i * 13.7 + 4.2;
+        const cell = 0.7 + hash(seed) * 1.1;
+        sandPool.push({
+          ox: (hash(seed + 1) - 0.5) * 2,
+          oy: (hash(seed + 2) - 0.5) * 2,
+          seed,
+          verts: makeShard(seed + 3, cell),
+          rot: hash(seed + 4) * Math.PI * 2,
+          spin: (hash(seed + 5) - 0.5) * 0.12,
+          scale: 0.4 + hash(seed + 6) * 0.55,
+        });
+      }
+    };
+
+    /** Soften photo under cursor, then pack the disc with living sand shards. */
+    const paintPolaroid = (now: number) => {
+      if (!baked) return;
+      ctx.clearRect(0, 0, cssW, cssH);
+      ctx.drawImage(baked, 0, 0, cssW, cssH);
+      if (!pointerOn) return;
+
+      ensureSandPool();
+      const t = now * 0.001;
+
+      // soft fade of sharp photo — replaced visually by sand, not a see-through hole
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-out";
+      const fade = ctx.createRadialGradient(ptrLx, ptrLy, 0, ptrLx, ptrLy, DISSOLVE_R);
+      fade.addColorStop(0, "rgba(0,0,0,0.92)");
+      fade.addColorStop(0.7, "rgba(0,0,0,0.55)");
+      fade.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = fade;
+      ctx.beginPath();
+      ctx.arc(ptrLx, ptrLy, DISSOLVE_R, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ptrLx, ptrLy, DISSOLVE_R, 0, Math.PI * 2);
+      ctx.clip();
+
+      for (let i = 0; i < sandPool.length; i++) {
+        const g = sandPool[i];
+        const ang = hash(g.seed + 8) * Math.PI * 2;
+        const dist = Math.sqrt(hash(g.seed + 9)) * DISSOLVE_R;
+        const jx = (fbm(g.seed + t * 2.4) - 0.5) * 5.5;
+        const jy = (fbm(g.seed + 20 + t * 2.1) - 0.5) * 5.5;
+        const lx = ptrLx + Math.cos(ang) * dist + g.ox + jx;
+        const ly = ptrLy + Math.sin(ang) * dist + g.oy + jy;
+        const col = sampleColorAt(
+          ptrLx + Math.cos(ang) * dist,
+          ptrLy + Math.sin(ang) * dist,
+        );
+        const edge = Math.min(1, (DISSOLVE_R - dist) / 8);
+        const alpha = 0.55 + edge * 0.4;
+        ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${alpha.toFixed(3)})`;
+        drawShard(ctx, lx, ly, g.verts, g.scale, g.rot + t * g.spin * 10);
+      }
+
+      // denser speck fill so no empty gaps show through
+      for (let i = 0; i < 160; i++) {
+        const seed = i * 9.1 + t * 3;
+        const ang = hash(seed) * Math.PI * 2;
+        const dist = Math.sqrt(hash(seed + 1)) * DISSOLVE_R * 0.98;
+        const lx = ptrLx + Math.cos(ang) * dist + (fbm(seed + t) - 0.5) * 3;
+        const ly = ptrLy + Math.sin(ang) * dist + (fbm(seed + 5 + t) - 0.5) * 3;
+        const col = sampleColorAt(lx, ly);
+        const sz = 0.8 + hash(seed + 2) * 1.6;
+        ctx.fillStyle = `rgba(${col.r},${col.g},${col.b},${(0.55 + hash(seed + 3) * 0.4).toFixed(3)})`;
+        ctx.fillRect(lx, ly, sz, sz);
+      }
+      ctx.restore();
+    };
+
     const spawnDissolveBits = (now: number) => {
-      if (!pointerOn || now - lastSpawn < 16) return;
+      if (!pointerOn || now - lastSpawn < 28) return;
       lastSpawn = now;
       const live = wrap.getBoundingClientRect();
-      for (let n = 0; n < 5; n++) {
+      for (let n = 0; n < 3; n++) {
         const seed = now * 0.01 + n * 7.3;
         const ang = hash(seed) * Math.PI * 2;
-        const dist = hash(seed + 1) * DISSOLVE_R * 0.85;
+        const dist = hash(seed + 1) * DISSOLVE_R * 0.7;
         const lx = ptrLx + Math.cos(ang) * dist;
         const ly = ptrLy + Math.sin(ang) * dist;
         if (lx < 0 || ly < 0 || lx > cssW || ly > cssH) continue;
         const col = sampleColorAt(lx, ly);
         const screen = localToScreen(lx, ly, live, cssW, cssH);
-        const outAng = Math.atan2(ly - ptrLy, lx - ptrLx) + (hash(seed + 2) - 0.5) * 1.2;
-        const speed = 0.4 + hash(seed + 3) * 1.6;
-        const cell = 0.9 + hash(seed + 4) * 1.2;
+        const outAng = Math.atan2(ly - ptrLy, lx - ptrLx) + (hash(seed + 2) - 0.5) * 0.9;
+        const speed = 0.25 + hash(seed + 3) * 0.9;
+        const cell = 0.8 + hash(seed + 4) * 1.0;
         dissolve.push({
           x: screen.x,
           y: screen.y,
           vx: Math.cos(outAng) * speed,
-          vy: Math.sin(outAng) * speed - 0.25,
+          vy: Math.sin(outAng) * speed - 0.15,
           life: 0,
-          maxLife: 420 + hash(seed + 5) * 380,
+          maxLife: 380 + hash(seed + 5) * 320,
           r: col.r,
           g: col.g,
           b: col.b,
           verts: makeShard(seed + 6, cell),
           rot: hash(seed + 7) * Math.PI * 2,
-          spin: (hash(seed + 8) - 0.5) * 0.18,
-          scale: 0.45 + hash(seed + 9) * 0.55,
+          spin: (hash(seed + 8) - 0.5) * 0.16,
+          scale: 0.4 + hash(seed + 9) * 0.5,
         });
       }
-      if (dissolve.length > 220) dissolve.splice(0, dissolve.length - 220);
+      if (dissolve.length > 140) dissolve.splice(0, dissolve.length - 140);
     };
 
     const drawOrbiters = (now: number, live: DOMRect) => {
@@ -583,15 +642,8 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       octx.clearRect(0, 0, viewW, viewH);
       drawOrbiters(now, live);
 
-      if (pointerOn) {
-        spawnDissolveBits(now);
-        paintPolaroid(true);
-      } else if (dissolve.length === 0) {
-        paintPolaroid(false);
-      } else {
-        paintPolaroid(false);
-      }
-
+      paintPolaroid(now);
+      if (pointerOn) spawnDissolveBits(now);
       drawDissolveBits(dt);
       raf = requestAnimationFrame(idleTick);
     };
@@ -606,7 +658,8 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       const bctx = baked.getContext("2d", { willReadFrequently: true });
       bakeData = bctx ? bctx.getImageData(0, 0, baked.width, baked.height) : null;
       overlay.classList.add(styles.overlayLive);
-      paintPolaroid(false);
+      ensureSandPool();
+      paintPolaroid(performance.now());
       raf = requestAnimationFrame(idleTick);
     };
 
@@ -620,7 +673,7 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       } else if (idle) {
         const bctx = baked.getContext("2d", { willReadFrequently: true });
         bakeData = bctx ? bctx.getImageData(0, 0, baked.width, baked.height) : null;
-        paintPolaroid(pointerOn);
+        paintPolaroid(performance.now());
       }
     };
 
