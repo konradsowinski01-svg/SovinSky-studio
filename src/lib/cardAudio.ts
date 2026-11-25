@@ -12,7 +12,6 @@ const FADE_OUT_MS = (CARD_MUSIC_END - CARD_MUSIC_FADE_AT) * 1000;
 
 let audio: HTMLAudioElement | null = null;
 let started = false;
-let fading = false;
 let unlocked = false;
 let readyPromise: Promise<void> | null = null;
 let endWatch: (() => void) | null = null;
@@ -59,7 +58,6 @@ function clearEndWatch() {
 }
 
 function fadeVolume(el: HTMLAudioElement, to: number, ms: number, onDone?: () => void) {
-  fading = true;
   const t0 = performance.now();
   const from = el.volume;
   const tick = (now: number) => {
@@ -69,7 +67,6 @@ function fadeVolume(el: HTMLAudioElement, to: number, ms: number, onDone?: () =>
       requestAnimationFrame(tick);
       return;
     }
-    fading = false;
     onDone?.();
   };
   requestAnimationFrame(tick);
