@@ -33,7 +33,7 @@ const CUES: Cue[] = [
   { at: 11, duration: 1.4, anchor: "kampania-sms", align: "center" },
   { at: 13.4, duration: 1.4, anchor: "about", align: "center", offsetPx: -220 },
   { at: 16, duration: 1.4, deltaPx: 400 },
-  { at: 18.8, duration: 1.4, deltaPx: 800 },
+  { at: 18.6, duration: 1.4, deltaPx: 800 },
 ];
 
 const easeOutQuart = (t: number) => 1 - (1 - t) ** 4;
