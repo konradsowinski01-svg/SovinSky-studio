@@ -5,8 +5,7 @@ import { PortfolioFractals } from "./PortfolioFractals";
 import styles from "./AboutPage.module.css";
 
 export function AboutPage() {
-  const mailto = `mailto:${site.email}?subject=${encodeURIComponent("Sprawa projektu")}`;
-  const body = site.about.replace(site.brand, "").trimStart();
+  const mailto = `mailto:${site.email}?subject=${encodeURIComponent("Cześć")}`;
   let index = 0;
 
   return (
@@ -18,9 +17,9 @@ export function AboutPage() {
         </div>
         <h1 className="sr-only">O mnie</h1>
         <div className={styles.intro}>
-          <p>{body}</p>
+          <p>{site.aboutPage.intro}</p>
           <a href={mailto} className={styles.cta}>
-            Napisz w sprawie projektu <span aria-hidden="true">→</span>
+            {site.aboutPage.cta} <span aria-hidden="true">→</span>
           </a>
         </div>
       </header>
@@ -28,11 +27,11 @@ export function AboutPage() {
       <section className={styles.content}>
         <div className={styles.story}>
           <PolaroidPortrait alt={`${site.brandShort}, portret`} className={styles.portrait} />
-          <p className={styles.lead}>{site.about}</p>
+          <p className={styles.lead}>{site.aboutPage.story}</p>
         </div>
 
         <div className={styles.services}>
-          <p className={styles.servicesLabel}>Usługi</p>
+          <p className={styles.servicesLabel}>Czym się zajmuję</p>
           <div className={styles.servicesGrid}>
             {site.serviceGroups.map((group) => (
               <div key={group.title} className={styles.serviceGroup}>

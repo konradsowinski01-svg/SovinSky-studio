@@ -11,6 +11,14 @@ export const site = {
   whatsapp: "48574123044",
   about:
     "SowinSky Studio to miejsce, gdzie pomysł przeradza się w szkic, a następnie w realny produkt. Wszystko co robię powstaje z dbałością o detale i estetykę. Buduję strony i aplikacje od podstaw. Pracuję szybko, z naciskiem na wygląd, czytelność i funkcjonalność.",
+  /** Copy tylko na stronę #/about — pierwsza osoba, bliżej człowieka. */
+  aboutPage: {
+    intro:
+      "Cześć, jestem Konrad. Wolę skracać dystans: bez korpo-mowy, konkretnie i po ludzku. Jeśli masz pomysł albo coś, co trzeba ogarnąć - napisz, pogadamy.",
+    cta: "Napisz do mnie",
+    story:
+      "Projektuję i buduję strony oraz aplikacje od podstaw. Zależy mi na wyglądzie, czytelności i tym, żeby produkt naprawdę działał na co dzień. Pracuję szybko, ale nie na skróty - detale i estetyka są dla mnie częścią roboty, nie dodatkiem na koniec.",
+  },
   serviceGroups: [
     {
       title: "Platformy",
