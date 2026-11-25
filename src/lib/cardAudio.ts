@@ -10,7 +10,7 @@ const TARGET_VOL = 0.42;
 const FADE_IN_MS = 1600;
 const FADE_OUT_MS = (CARD_MUSIC_END - CARD_MUSIC_FADE_AT) * 1000;
 /** Cisza po tapie, zanim poleci wycinek. */
-export const CARD_MUSIC_TAP_DELAY_MS = 1120;
+export const CARD_MUSIC_TAP_DELAY_MS = 1130;
 
 let audio: HTMLAudioElement | null = null;
 let started = false;
