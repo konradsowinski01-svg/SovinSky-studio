@@ -41,6 +41,7 @@ const CUES: Cue[] = [
   { at: 16, duration: 1.4, deltaPx: 400 },
   // 18.5 − 50 ms; po dojechaniu (+1.4) + 1 s pauzy → powrót na górę
   { at: 18.45, duration: 1.4, deltaPx: 800 },
+  // Wolny powrót na home (hero / #top), potem odblokuj scroll.
   { at: 20.85, duration: 3.0, toTop: true, hold: true, ease: "inout" },
 ];
 
@@ -172,7 +173,15 @@ export function runCardScroll(audio: HTMLAudioElement) {
         restAt = cue.at + cue.duration;
       } else if (cue.hold || cue.toTop) {
         setScroll(toY);
-        if (cue.toTop) release();
+        if (cue.toTop) {
+          // Home screen: górna krawędź hero + czysty hash zamiast #/w.
+          setScroll(0);
+          if (window.location.hash.startsWith("#/w")) {
+            const base = `${window.location.pathname}${window.location.search}`;
+            history.replaceState(null, "", `${base}#top`);
+          }
+          release();
+        }
       } else {
         setScroll(restY + (t - restAt) * DRIFT_PX_PER_SEC);
       }
