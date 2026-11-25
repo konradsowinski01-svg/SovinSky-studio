@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { logoParts } from "../data/logo";
-import { armCardMusic, cueCardMusic } from "../lib/cardAudio";
+import {
+  armCardMusic,
+  cueCardMusic,
+  gestureCardMusic,
+  isCardMusicPending,
+  isCardMusicPlaying,
+} from "../lib/cardAudio";
 import topbarStyles from "./Topbar.module.css";
 import styles from "./CardIntro.module.css";
 
@@ -21,11 +27,11 @@ export function CardIntro({ onReveal, onDone }: Props) {
   const [visible, setVisible] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [doneTyping, setDoneTyping] = useState(false);
+  const [tapHint, setTapHint] = useState(false);
   const musicCued = useRef(false);
 
   useEffect(() => {
-    const disarm = armCardMusic();
-    return disarm;
+    return armCardMusic();
   }, []);
 
   useEffect(() => {
@@ -38,7 +44,9 @@ export function CardIntro({ onReveal, onDone }: Props) {
     const cueMusicOnce = () => {
       if (musicCued.current) return;
       musicCued.current = true;
-      void cueCardMusic();
+      void cueCardMusic().then((ok) => {
+        if (!cancelled && !ok) setTapHint(true);
+      });
     };
 
     const finish = (hold: number) => {
@@ -46,6 +54,7 @@ export function CardIntro({ onReveal, onDone }: Props) {
       later(() => {
         if (cancelled) return;
         setLeaving(true);
+        setTapHint(false);
         onReveal();
         later(onDone, FADE_MS);
       }, hold);
@@ -83,11 +92,18 @@ export function CardIntro({ onReveal, onDone }: Props) {
     };
   }, [onDone, onReveal]);
 
+  const onPointerDown = () => {
+    void gestureCardMusic().then((ok) => {
+      if (ok || isCardMusicPlaying() || !isCardMusicPending()) setTapHint(false);
+    });
+  };
+
   return (
     <div
       className={`${styles.root} ${leaving ? styles.leaving : ""}`}
       aria-live="polite"
       aria-busy={!doneTyping}
+      onPointerDown={onPointerDown}
     >
       <div className={styles.sheet} aria-hidden="true" />
       <div className={`${styles.logoSlot} ${topbarStyles.logo}`} aria-hidden="true">
@@ -110,6 +126,11 @@ export function CardIntro({ onReveal, onDone }: Props) {
           aria-hidden="true"
         />
       </p>
+      {tapHint ? (
+        <p className={styles.tapHint} aria-live="polite">
+          Dotknij ekranu, żeby włączyć dźwięk
+        </p>
+      ) : null}
     </div>
   );
 }
