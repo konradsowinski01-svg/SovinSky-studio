@@ -1,22 +1,17 @@
-/** `#/w` — play w geście, słyszalne dopiero po DELAY_MS. */
+/**
+ * `#/w` — zwykły play() w geście tapnięcia.
+ * Opóźnienie 1100 ms jest wklejone w plik jako cisza: Safari blokuje
+ * dźwięk odpalany/odciszany z timera poza gestem.
+ */
 
 const SRC = `${import.meta.env.BASE_URL}card-intro.mp3`;
-const DELAY_MS = 1100;
 
-let audio: HTMLAudioElement | null = null;
 let started = false;
-let timer = 0;
 
 export function armCardMusic(): () => void {
   const preload = new Audio(SRC);
   preload.preload = "auto";
-  return () => {
-    if (timer) window.clearTimeout(timer);
-  };
-}
-
-export function isCardMusicPlaying(): boolean {
-  return Boolean(audio && !audio.paused && !audio.muted);
+  return () => undefined;
 }
 
 export function startCardMusicFromTap(): void {
@@ -24,29 +19,14 @@ export function startCardMusicFromTap(): void {
   started = true;
 
   const a = new Audio(SRC);
-  audio = a;
   a.preload = "auto";
-  a.volume = 1;
-  a.muted = true;
   a.setAttribute("playsinline", "true");
   a.setAttribute("webkit-playsinline", "true");
 
-  // Jedyny play() — w geście. Potem tylko unmute + seek, bez pause/play.
-  void a.play().catch(() => {
-    started = false;
-  });
-
-  timer = window.setTimeout(() => {
-    timer = 0;
-    try {
-      a.currentTime = 0;
-    } catch {
-      /* ignore */
-    }
-    a.muted = false;
-    a.volume = 1;
-    if (a.paused) {
-      void a.play().catch(() => undefined);
-    }
-  }, DELAY_MS);
+  const playAttempt = a.play();
+  if (playAttempt) {
+    void playAttempt.catch(() => {
+      started = false;
+    });
+  }
 }
