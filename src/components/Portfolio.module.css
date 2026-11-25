@@ -1,6 +1,6 @@
 .page {
   min-height: 100svh;
-  padding: clamp(72px, 10vh, 120px) var(--gutter) 120px;
+  padding: clamp(56px, 7vh, 96px) var(--gutter) 120px;
 }
 
 .head {
@@ -16,9 +16,9 @@
 
 .mark {
   position: absolute;
-  top: -28%;
-  bottom: -18%;
-  left: calc(-1 * var(--gutter));
+  top: -52%;
+  bottom: 0;
+  left: clamp(8px, 1.5vw, 18px);
   right: calc(-1 * var(--gutter));
   z-index: 0;
   display: grid;
@@ -26,6 +26,11 @@
   overflow: visible;
   pointer-events: none;
   animation: rise 1.15s var(--ease-reveal, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+.mark > :first-child {
+  position: relative;
+  z-index: 1;
 }
 
 .intro {

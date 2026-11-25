@@ -1,0 +1,35 @@
+.polaroid {
+  margin: 0;
+  width: min(42vw, 340px);
+  max-width: 100%;
+  padding: 14px 14px 52px;
+  background: #f3efe6;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 18px 40px rgba(0, 0, 0, 0.45),
+    0 2px 8px rgba(0, 0, 0, 0.28);
+  transform: rotate(-2.5deg);
+  transform-origin: 50% 60%;
+}
+
+.shot {
+  overflow: hidden;
+  aspect-ratio: 1 / 1.05;
+  background: #1a120e;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  filter: contrast(1.04) saturate(0.92) sepia(0.08);
+}
+
+@media (max-width: 809.98px) {
+  .polaroid {
+    width: min(72vw, 300px);
+    padding: 12px 12px 44px;
+  }
+}

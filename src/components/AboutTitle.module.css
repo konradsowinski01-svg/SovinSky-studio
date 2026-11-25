@@ -1,0 +1,24 @@
+.title {
+  display: block;
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0.08em 0.04em 0.22em 0;
+  font-family: var(--font-brand);
+  font-weight: 400;
+  font-size: clamp(9rem, 38vw, 28rem);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+  text-align: left;
+  user-select: none;
+  pointer-events: none;
+  color: #4a4a4a;
+  opacity: 0.5;
+}
+
+@media (max-width: 809.98px) {
+  .title {
+    font-size: clamp(6.5rem, 42vw, 16rem);
+  }
+}

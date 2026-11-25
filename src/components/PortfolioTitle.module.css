@@ -1,57 +1,24 @@
-.stage {
+.title {
+  display: block;
   position: relative;
   z-index: 1;
-  display: inline-block;
-  isolation: isolate;
   margin: 0;
   padding: 0.08em 0.04em 0.22em 0;
-  line-height: 0.92;
-  overflow: visible;
-}
-
-.fill {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.fill :global(canvas) {
-  position: absolute !important;
-  inset: 0 !important;
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.mask,
-.solid {
-  position: relative;
-  z-index: 1;
-  display: block;
   font-family: var(--font-brand);
   font-weight: 400;
-  font-size: clamp(9rem, 38vw, 28rem);
+  font-size: clamp(11rem, 46vw, 34rem);
   line-height: 0.92;
   letter-spacing: -0.05em;
   white-space: nowrap;
   text-align: left;
   user-select: none;
-}
-
-.mask {
-  color: #fff;
-  mix-blend-mode: destination-in;
-}
-
-.solid {
-  color: var(--accent);
-  opacity: 0.9;
+  pointer-events: none;
+  color: #4a4a4a;
+  opacity: 0.5;
 }
 
 @media (max-width: 809.98px) {
-  .mask,
-  .solid {
-    font-size: clamp(6.5rem, 42vw, 14rem);
+  .title {
+    font-size: clamp(8rem, 52vw, 18rem);
   }
 }

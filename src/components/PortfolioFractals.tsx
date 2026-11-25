@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
-import styles from "./PortfolioSand.module.css";
+import styles from "./PortfolioFractals.module.css";
 
-const COUNT = 160;
+const COUNT = 180;
 
 type Speck = {
   x: number;
@@ -41,26 +41,27 @@ function fbm(x: number, octaves = 3) {
 
 function makeSpecks(w: number, h: number): Speck[] {
   const list: Speck[] = [];
-  const cx = w * 0.38;
-  const cy = h * 0.32;
+  // Cluster around the wordmark: left-anchored, mid-height of the mark.
+  const cx = w * 0.42;
+  const cy = h * 0.42;
   for (let i = 0; i < COUNT; i++) {
-    const seed = i * 23.41 + 7.2;
+    const seed = i * 21.7 + 4.2;
     const ang = hash(seed) * Math.PI * 2;
-    const rad = (0.12 + hash(seed + 1.7) * 0.55) * Math.min(w, h);
+    const rad = (0.08 + hash(seed + 1.3) * 0.62) * Math.min(w, h);
     list.push({
-      x: cx + Math.cos(ang) * rad + (hash(seed + 3) - 0.5) * w * 0.2,
-      y: cy + Math.sin(ang) * rad * 0.55 + (hash(seed + 4.2) - 0.5) * h * 0.25,
-      vx: (hash(seed + 5) - 0.5) * 48,
-      vy: (hash(seed + 8) - 0.5) * 38,
-      r: 0.45 + hash(seed + 11) * 1.35,
-      a: 0.22 + hash(seed + 14) * 0.5,
+      x: cx + Math.cos(ang) * rad * 1.35 + (hash(seed + 3) - 0.5) * w * 0.25,
+      y: cy + Math.sin(ang) * rad * 0.55 + (hash(seed + 4.1) - 0.5) * h * 0.3,
+      vx: (hash(seed + 5) - 0.5) * 42,
+      vy: (hash(seed + 8) - 0.5) * 34,
+      r: 0.4 + hash(seed + 11) * 1.25,
+      a: 0.2 + hash(seed + 14) * 0.48,
       seed,
     });
   }
   return list;
 }
 
-export function PortfolioSand() {
+export function PortfolioFractals() {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -97,8 +98,8 @@ export function PortfolioSand() {
     };
 
     const wrap = (v: number, max: number) => {
-      if (v < -16) return max + 16;
-      if (v > max + 16) return -16;
+      if (v < -18) return max + 18;
+      if (v > max + 18) return -18;
       return v;
     };
 
@@ -107,8 +108,8 @@ export function PortfolioSand() {
       const dt = Math.min(0.05, (ts - lastTs) / 1000);
       lastTs = ts;
       const t = ts * 0.001;
-      const cx = w * 0.38;
-      const cy = h * 0.32;
+      const cx = w * 0.42;
+      const cy = h * 0.42;
 
       ctx.clearRect(0, 0, w, h);
 
@@ -116,27 +117,26 @@ export function PortfolioSand() {
         const dx = s.x - cx;
         const dy = s.y - cy;
         const dist = Math.hypot(dx, dy) + 1;
-        // Soft orbit + fractal drift around the wordmark.
-        const orbit = 22 / dist;
-        const ax = (fbm(t * 0.45 + s.seed) - 0.5) * 110 - dy * orbit * 0.35;
-        const ay = (fbm(t * 0.4 + s.seed + 18.2) - 0.5) * 95 + dx * orbit * 0.35;
+        const orbit = 28 / dist;
+        const ax = (fbm(t * 0.48 + s.seed) - 0.5) * 120 - dy * orbit * 0.4;
+        const ay = (fbm(t * 0.42 + s.seed + 17.5) - 0.5) * 100 + dx * orbit * 0.4;
         s.vx += ax * dt;
         s.vy += ay * dt;
-        s.vx *= 0.99;
-        s.vy *= 0.99;
+        s.vx *= 0.989;
+        s.vy *= 0.989;
         const spd = Math.hypot(s.vx, s.vy);
-        if (spd > 78) {
-          s.vx = (s.vx / spd) * 78;
-          s.vy = (s.vy / spd) * 78;
+        if (spd > 72) {
+          s.vx = (s.vx / spd) * 72;
+          s.vy = (s.vy / spd) * 72;
         }
         s.x = wrap(s.x + s.vx * dt, w);
         s.y = wrap(s.y + s.vy * dt, h);
 
-        const pulse = 0.7 + fbm(t * 0.4 + s.seed + 9) * 0.55;
+        const pulse = 0.7 + fbm(t * 0.38 + s.seed + 8) * 0.5;
         const alpha = Math.min(1, s.a * pulse);
-        const size = Math.max(0.45, s.r * (0.85 + pulse * 0.25));
+        const size = Math.max(0.4, s.r * (0.85 + pulse * 0.2));
 
-        ctx.fillStyle = `rgba(255, 150, 55, ${alpha.toFixed(3)})`;
+        ctx.fillStyle = `rgba(255, 140, 50, ${alpha.toFixed(3)})`;
         ctx.fillRect(s.x, s.y, size, size);
       }
 

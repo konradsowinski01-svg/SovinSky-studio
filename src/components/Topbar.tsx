@@ -1,11 +1,11 @@
 import { site } from "../data/site";
 import { logoParts } from "../data/logo";
-import { PORTFOLIO_HASH, type Route } from "../lib/router";
+import { ABOUT_HASH, PORTFOLIO_HASH, type Route } from "../lib/router";
 import styles from "./Topbar.module.css";
 
 const links = [
   { href: PORTFOLIO_HASH, label: "portfolio" },
-  { href: "#about", label: "o mnie" },
+  { href: ABOUT_HASH, label: "o mnie" },
   { href: "#contact", label: "kontakt" },
 ] as const;
 
@@ -14,7 +14,6 @@ type Props = {
 };
 
 export function Topbar({ route }: Props) {
-  const away = route === "portfolio";
   return (
     <header className={styles.topbar} data-topbar>
       <a className={styles.logo} href="#top" aria-label={`${site.brand}, wróć na górę`}>
@@ -32,15 +31,16 @@ export function Topbar({ route }: Props) {
         ))}
       </a>
       <nav className={styles.nav} aria-label="Główne">
-        {links.map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            aria-current={away && link.href === PORTFOLIO_HASH ? "page" : undefined}
-          >
-            {link.label}
-          </a>
-        ))}
+        {links.map((link) => {
+          const current =
+            (route === "portfolio" && link.href === PORTFOLIO_HASH) ||
+            (route === "about" && link.href === ABOUT_HASH);
+          return (
+            <a key={link.href} href={link.href} aria-current={current ? "page" : undefined}>
+              {link.label}
+            </a>
+          );
+        })}
       </nav>
     </header>
   );

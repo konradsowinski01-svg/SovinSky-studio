@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { About } from "./components/About";
+import { AboutPage } from "./components/AboutPage";
 import { AmbientFractals } from "./components/AmbientFractals";
 import { CardIntro } from "./components/CardIntro";
 import { Contact } from "./components/Contact";
@@ -76,6 +77,8 @@ export default function App() {
         <Topbar route={route} />
         {route === "portfolio" ? (
           <Portfolio />
+        ) : route === "about" ? (
+          <AboutPage />
         ) : (
           <main id="main">
             <Hero />

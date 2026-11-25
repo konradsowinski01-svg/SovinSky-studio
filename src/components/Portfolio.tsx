@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { projects } from "../data/site";
+import { projects, site } from "../data/site";
 import { makeTexture } from "./ProjectWarp";
-import { PortfolioSand } from "./PortfolioSand";
+import { PortfolioFractals } from "./PortfolioFractals";
 import { PortfolioTitle } from "./PortfolioTitle";
 import styles from "./Portfolio.module.css";
 
@@ -10,13 +10,14 @@ export function Portfolio() {
     () => projects.map((project, index) => makeTexture(project.title, index).toDataURL("image/jpeg", 0.86)),
     [],
   );
+  const mailto = `mailto:${site.email}?subject=${encodeURIComponent("Sprawa projektu")}`;
 
   return (
     <main id="main" className={styles.page}>
       <header className={styles.head}>
         <div className={styles.mark} aria-hidden="true">
           <PortfolioTitle />
-          <PortfolioSand />
+          <PortfolioFractals />
         </div>
         <h1 className="sr-only">Portfolio</h1>
         <div className={styles.intro}>
@@ -25,7 +26,7 @@ export function Portfolio() {
             Każdy projekt zaprojektowałem i zbudowałem od zera, z myślą o telefonie i szybkim
             kontakcie.
           </p>
-          <a href="#contact" className={styles.cta}>
+          <a href={mailto} className={styles.cta}>
             Napisz w sprawie projektu <span aria-hidden="true">→</span>
           </a>
         </div>
