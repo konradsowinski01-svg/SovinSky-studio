@@ -21,13 +21,15 @@ type Cue = {
   anchor: string;
   /** `top` — tuż pod topbarem, `center` — środek elementu na środku ekranu. */
   align: "top" | "center";
+  /** Korekta pozycji w px (ujemne = wyżej). */
+  offsetPx?: number;
 };
 
 const CUES: Cue[] = [
   { at: 6, duration: 1.4, anchor: "work-heading", align: "top" },
   { at: 8.8, duration: 1.4, anchor: "firma-online", align: "top" },
   { at: 11, duration: 1.4, anchor: "kampania-sms", align: "center" },
-  { at: 13, duration: 1.4, anchor: "about", align: "center" },
+  { at: 13.4, duration: 1.4, anchor: "about", align: "center", offsetPx: -80 },
 ];
 
 const easeOutQuart = (t: number) => 1 - (1 - t) ** 4;
@@ -61,12 +63,13 @@ function anchorY(cue: Cue): number | null {
   const el = document.querySelector<HTMLElement>(`[data-card-anchor="${cue.anchor}"]`);
   if (!el) return null;
   const top = layoutTop(el);
+  const extra = cue.offsetPx ?? 0;
   if (cue.align === "center") {
-    return top + el.offsetHeight / 2 - window.innerHeight / 2;
+    return top + el.offsetHeight / 2 - window.innerHeight / 2 + extra;
   }
   const topbar = document.querySelector<HTMLElement>("[data-topbar]");
   const offset = (topbar?.getBoundingClientRect().bottom ?? 0) + ANCHOR_GAP_PX;
-  return top - offset;
+  return top - offset + extra;
 }
 
 function setScroll(y: number) {
