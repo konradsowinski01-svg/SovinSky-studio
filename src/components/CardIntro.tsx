@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { logoParts } from "../data/logo";
+import { armCardMusic, cueCardMusic } from "../lib/cardAudio";
 import topbarStyles from "./Topbar.module.css";
 import styles from "./CardIntro.module.css";
 
 const MESSAGE = "Miło Cię poznać, zobacz co możemy razem zbudować";
+/** Pierwszy znak ostatniego słowa — tu startuje muzyka od 2:45. */
+const LAST_WORD_AT = MESSAGE.lastIndexOf("zbudować");
 const HOLD_MS = 1500;
 const FADE_MS = 1100;
 
@@ -18,12 +21,24 @@ export function CardIntro({ onReveal, onDone }: Props) {
   const [visible, setVisible] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [doneTyping, setDoneTyping] = useState(false);
+  const musicCued = useRef(false);
+
+  useEffect(() => {
+    const disarm = armCardMusic();
+    return disarm;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     const timers: number[] = [];
     const later = (fn: () => void, ms: number) => {
       timers.push(window.setTimeout(fn, ms));
+    };
+
+    const cueMusicOnce = () => {
+      if (musicCued.current) return;
+      musicCued.current = true;
+      void cueCardMusic();
     };
 
     const finish = (hold: number) => {
@@ -39,6 +54,7 @@ export function CardIntro({ onReveal, onDone }: Props) {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
       setVisible(MESSAGE);
+      cueMusicOnce();
       finish(900);
       return () => {
         cancelled = true;
@@ -52,6 +68,7 @@ export function CardIntro({ onReveal, onDone }: Props) {
       if (i < MESSAGE.length) {
         i += 1;
         setVisible(MESSAGE.slice(0, i));
+        if (i - 1 === LAST_WORD_AT) cueMusicOnce();
         later(tick, 36 + Math.random() * 42);
         return;
       }
