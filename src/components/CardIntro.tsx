@@ -117,6 +117,11 @@ export function CardIntro({ onReveal, onDone }: Props) {
           <span className={styles.tapStartPulse} aria-hidden="true" />
         </p>
       )}
+      {begun ? null : (
+        <p className={styles.soundOn} aria-hidden="true">
+          sound on
+        </p>
+      )}
     </div>
   );
 }
