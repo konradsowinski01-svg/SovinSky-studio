@@ -3,10 +3,12 @@
 const SRC = `${import.meta.env.BASE_URL}card-theme.mp3`;
 /** Stały fragment utworu — nic poza tym nie gra. */
 export const CARD_MUSIC_START = 2 * 60 + 44;
+/** Początek wyciszania — do END trwa ~4 s. */
+export const CARD_MUSIC_FADE_AT = 3 * 60 + 6;
 export const CARD_MUSIC_END = 3 * 60 + 10;
 const TARGET_VOL = 0.42;
 const FADE_IN_MS = 1600;
-const FADE_OUT_MS = 900;
+const FADE_OUT_MS = (CARD_MUSIC_END - CARD_MUSIC_FADE_AT) * 1000;
 
 let audio: HTMLAudioElement | null = null;
 let started = false;
@@ -85,18 +87,19 @@ function stopAtEnd(el: HTMLAudioElement) {
     }
   };
 
+  let fadingOut = false;
   const onTime = () => {
-    const left = CARD_MUSIC_END - el.currentTime;
-    if (left <= FADE_OUT_MS / 1000) {
+    if (el.currentTime >= CARD_MUSIC_END) {
       el.removeEventListener("timeupdate", onTime);
-      if (!fading) {
-        fadeVolume(el, 0, Math.max(120, left * 1000), finish);
-      } else {
-        finish();
-      }
+      finish();
       return;
     }
-    if (el.currentTime >= CARD_MUSIC_END) finish();
+    if (!fadingOut && el.currentTime >= CARD_MUSIC_FADE_AT) {
+      fadingOut = true;
+      el.removeEventListener("timeupdate", onTime);
+      const leftMs = Math.max(200, (CARD_MUSIC_END - el.currentTime) * 1000);
+      fadeVolume(el, 0, Math.min(FADE_OUT_MS, leftMs), finish);
+    }
   };
 
   el.addEventListener("timeupdate", onTime);
