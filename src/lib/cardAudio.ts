@@ -1,4 +1,4 @@
-/** Muzyka tylko dla `#/w`. Start od 2:45 przy ostatnim słowie intro. */
+/** Muzyka tylko dla `#/w`. Start od 2:45; cue ~1 s przed „zbudować”. */
 
 const SRC = `${import.meta.env.BASE_URL}card-theme.mp3`;
 export const CARD_MUSIC_START = 2 * 60 + 45;
@@ -8,8 +8,7 @@ const FADE_MS = 1600;
 let audio: HTMLAudioElement | null = null;
 let started = false;
 let fading = false;
-/** Cue już padł (ostatnie słowo), ale play mógł być zablokowany. */
-let pendingCue = false;
+let unlocked = false;
 let readyPromise: Promise<void> | null = null;
 
 function ensure(): HTMLAudioElement {
@@ -68,8 +67,11 @@ async function seekAndPlay(): Promise<boolean> {
 
   try {
     await whenReady(el);
-    el.currentTime = CARD_MUSIC_START;
-    // mały delay pomaga Safari dogonić seek
+    try {
+      el.currentTime = CARD_MUSIC_START;
+    } catch {
+      /* Safari bywa kapryśny przed pełnym loadem */
+    }
     if (Math.abs(el.currentTime - CARD_MUSIC_START) > 1) {
       await new Promise<void>((r) => {
         const onSeek = () => {
@@ -77,18 +79,21 @@ async function seekAndPlay(): Promise<boolean> {
           r();
         };
         el.addEventListener("seeked", onSeek);
-        window.setTimeout(r, 120);
+        window.setTimeout(r, 150);
       });
-      el.currentTime = CARD_MUSIC_START;
+      try {
+        el.currentTime = CARD_MUSIC_START;
+      } catch {
+        /* ignore */
+      }
     }
+    el.muted = false;
     el.volume = 0;
     await el.play();
     started = true;
-    pendingCue = false;
     fadeIn(el);
     return true;
   } catch {
-    pendingCue = true;
     return false;
   }
 }
@@ -100,40 +105,44 @@ export function armCardMusic(): () => void {
   return () => undefined;
 }
 
-/** Wołane przy pierwszym znaku „zbudować”. */
-export async function cueCardMusic(): Promise<boolean> {
-  pendingCue = true;
-  return seekAndPlay();
+/**
+ * Synchronicznie w pointerdown — odblokowuje silnik Safari/Chrome.
+ * Bez await, żeby nie stracić user activation.
+ */
+export function unlockCardMusic(): void {
+  if (unlocked && audio) return;
+  const el = ensure();
+  el.muted = true;
+  el.volume = 0;
+  try {
+    el.currentTime = CARD_MUSIC_START;
+  } catch {
+    /* ignore */
+  }
+  const playAttempt = el.play();
+  unlocked = true;
+  if (playAttempt) {
+    void playAttempt
+      .then(() => {
+        el.pause();
+        el.muted = false;
+        try {
+          el.currentTime = CARD_MUSIC_START;
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch(() => {
+        unlocked = false;
+      });
+  }
 }
 
-/**
- * Wołane z pointerdown na intro — Safari wymaga gestu.
- * Jeśli cue już padł, odpala od razu od 2:45.
- */
-export async function gestureCardMusic(): Promise<boolean> {
-  if (started && audio && !audio.paused) return true;
-  if (pendingCue || started) return seekAndPlay();
-
-  // Samo odblokowanie silnika (cicho), bez słyszalnego startu przed cue.
-  const el = ensure();
-  try {
-    await whenReady(el);
-    el.muted = true;
-    el.currentTime = CARD_MUSIC_START;
-    await el.play();
-    el.pause();
-    el.muted = false;
-    el.currentTime = CARD_MUSIC_START;
-    return true;
-  } catch {
-    return false;
-  }
+/** Wołane ~1 s przed pierwszym znakiem „zbudować”. */
+export async function cueCardMusic(): Promise<boolean> {
+  return seekAndPlay();
 }
 
 export function isCardMusicPlaying(): boolean {
   return Boolean(started && audio && !audio.paused);
-}
-
-export function isCardMusicPending(): boolean {
-  return pendingCue && !isCardMusicPlaying();
 }

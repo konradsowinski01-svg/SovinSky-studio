@@ -1,18 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { logoParts } from "../data/logo";
-import {
-  armCardMusic,
-  cueCardMusic,
-  gestureCardMusic,
-  isCardMusicPending,
-  isCardMusicPlaying,
-} from "../lib/cardAudio";
+import { armCardMusic, cueCardMusic, unlockCardMusic } from "../lib/cardAudio";
 import topbarStyles from "./Topbar.module.css";
 import styles from "./CardIntro.module.css";
 
 const MESSAGE = "Miło Cię poznać, zobacz co możemy razem zbudować";
-/** Pierwszy znak ostatniego słowa — tu startuje muzyka od 2:45. */
+/** Pierwszy znak ostatniego słowa. */
 const LAST_WORD_AT = MESSAGE.lastIndexOf("zbudować");
+/** Średni delay znaku — muzyka ~1 s przed „zbudować”. */
+const CHAR_AVG_MS = 57;
+const MUSIC_LEAD_MS = 1000;
+const CUE_AT = Math.max(0, LAST_WORD_AT - Math.ceil(MUSIC_LEAD_MS / CHAR_AVG_MS));
 const HOLD_MS = 1500;
 const FADE_MS = 1100;
 
@@ -24,17 +22,20 @@ type Props = {
 };
 
 export function CardIntro({ onReveal, onDone }: Props) {
+  const [begun, setBegun] = useState(false);
   const [visible, setVisible] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [doneTyping, setDoneTyping] = useState(false);
-  const [tapHint, setTapHint] = useState(false);
   const musicCued = useRef(false);
+  const starting = useRef(false);
 
   useEffect(() => {
     return armCardMusic();
   }, []);
 
   useEffect(() => {
+    if (!begun) return;
+
     let cancelled = false;
     const timers: number[] = [];
     const later = (fn: () => void, ms: number) => {
@@ -44,9 +45,7 @@ export function CardIntro({ onReveal, onDone }: Props) {
     const cueMusicOnce = () => {
       if (musicCued.current) return;
       musicCued.current = true;
-      void cueCardMusic().then((ok) => {
-        if (!cancelled && !ok) setTapHint(true);
-      });
+      void cueCardMusic();
     };
 
     const finish = (hold: number) => {
@@ -54,7 +53,6 @@ export function CardIntro({ onReveal, onDone }: Props) {
       later(() => {
         if (cancelled) return;
         setLeaving(true);
-        setTapHint(false);
         onReveal();
         later(onDone, FADE_MS);
       }, hold);
@@ -77,32 +75,33 @@ export function CardIntro({ onReveal, onDone }: Props) {
       if (i < MESSAGE.length) {
         i += 1;
         setVisible(MESSAGE.slice(0, i));
-        if (i - 1 === LAST_WORD_AT) cueMusicOnce();
+        if (i - 1 === CUE_AT) cueMusicOnce();
         later(tick, 36 + Math.random() * 42);
         return;
       }
       finish(HOLD_MS);
     };
 
-    later(tick, 720);
+    later(tick, 420);
 
     return () => {
       cancelled = true;
       timers.forEach(clearTimeout);
     };
-  }, [onDone, onReveal]);
+  }, [begun, onDone, onReveal]);
 
   const onPointerDown = () => {
-    void gestureCardMusic().then((ok) => {
-      if (ok || isCardMusicPlaying() || !isCardMusicPending()) setTapHint(false);
-    });
+    if (begun || starting.current) return;
+    starting.current = true;
+    unlockCardMusic();
+    setBegun(true);
   };
 
   return (
     <div
       className={`${styles.root} ${leaving ? styles.leaving : ""}`}
       aria-live="polite"
-      aria-busy={!doneTyping}
+      aria-busy={begun && !doneTyping}
       onPointerDown={onPointerDown}
     >
       <div className={styles.sheet} aria-hidden="true" />
@@ -119,18 +118,20 @@ export function CardIntro({ onReveal, onDone }: Props) {
           />
         ))}
       </div>
-      <p className={styles.line}>
-        <span>{visible}</span>
-        <span
-          className={`${styles.caret} ${doneTyping ? styles.caretIdle : ""}`}
-          aria-hidden="true"
-        />
-      </p>
-      {tapHint ? (
-        <p className={styles.tapHint} aria-live="polite">
-          Dotknij ekranu, żeby włączyć dźwięk
+      {begun ? (
+        <p className={styles.line}>
+          <span>{visible}</span>
+          <span
+            className={`${styles.caret} ${doneTyping ? styles.caretIdle : ""}`}
+            aria-hidden="true"
+          />
         </p>
-      ) : null}
+      ) : (
+        <p className={styles.tapStart}>
+          Dotknij, żeby zacząć
+          <span className={styles.tapStartPulse} aria-hidden="true" />
+        </p>
+      )}
     </div>
   );
 }
