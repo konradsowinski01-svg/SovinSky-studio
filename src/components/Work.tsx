@@ -43,7 +43,7 @@ export function Work() {
                       <img
                         className={styles.appCover}
                         src={asset(project.cover)}
-                        alt={`${project.title} — mobilność, która pasuje do Twojego dnia`}
+                        alt={`${project.title} — podgląd marki`}
                         loading="lazy"
                         decoding="async"
                       />

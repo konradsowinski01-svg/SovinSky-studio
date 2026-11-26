@@ -64,12 +64,13 @@ export const projects: Project[] = [
     cover: "projects/arngcor/cover.jpg",
   },
   {
-    slug: "firma-online",
-    title: "Firma Online",
-    kind: "Strona firmowa",
+    slug: "rrclub",
+    title: "RRclub",
+    kind: "Aplikacja iOS & Android · w trakcie wdrażania",
     year: "2026",
     tone: "dark",
-    gradient: "linear-gradient(155deg, #2a1210 0%, #7c2d12 40%, #0a0a0a 100%)",
+    gradient: "linear-gradient(155deg, #1a1028 0%, #2a1840 40%, #050505 100%)",
+    cover: "projects/rrclub/cover.jpg",
   },
   {
     slug: "app-panel",
