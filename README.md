@@ -13,9 +13,9 @@ npm run dev
 
 1. Repo Settings → Pages → Source: **GitHub Actions**
 2. Push na `main` odpala workflow `.github/workflows/deploy.yml`
-3. Adres: `https://<user>.github.io/SowinSky-studio/`
+3. Oficjalna domena: `https://sowinsky-studio.pl` (CNAME w `public/CNAME`, `base: "/"`)
 
-`vite.config.ts` ustawia `base: "/SowinSky-studio/"` tylko przy `build`; lokalnie zostaje `/`.
+DNS (SEO Host) — apex `A` na IP GitHub Pages + `www` CNAME → `konradsowinski01-svg.github.io`.
 
 ## Treści do podmiany
 
