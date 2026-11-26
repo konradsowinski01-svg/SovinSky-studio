@@ -41,12 +41,7 @@ export function Work() {
               >
                 <div className={styles.bend} data-proj-bend="">
                   <div className={`${styles.visual} ${styles[project.tone]}`} data-proj-visual="">
-                    <ProjectWarp
-                      title={project.title}
-                      index={index}
-                      tone={project.tone}
-                      imageSrc={coverSrc}
-                    />
+                    <ProjectWarp title={project.title} index={index} imageSrc={coverSrc} />
                     <div className={styles.sun} aria-hidden="true" data-proj-sun="" />
                     {!coverSrc ? (
                       <div className={styles.frame} aria-hidden="true">

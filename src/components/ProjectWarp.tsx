@@ -269,7 +269,6 @@ export function makeTexture(title: string, index: number) {
 export function makeCoverTexture(
   image: HTMLImageElement | HTMLCanvasElement,
   index: number,
-  tone: "warm" | "dark" | "bright" = "warm",
 ) {
   const canvas = document.createElement("canvas");
   canvas.width = 1280;
@@ -277,12 +276,8 @@ export function makeCoverTexture(
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
 
-  const tonePalettes: Record<typeof tone, [string, string, string]> = {
-    warm: palettes[0]!,
-    dark: ["#5b21b6", "#1e1b4b", "#050508"],
-    bright: ["#fb923c", "#9a3412", "#111111"],
-  };
-  const [hot, deep, dark] = tonePalettes[tone];
+  // Match tile 3's orange–red card shell (palette index 2).
+  const [hot, deep, dark] = palettes[2]!;
   paintCardShell(ctx, index, { hot, deep, dark });
   drawCoverInFrame(ctx, image, image.width, image.height);
   return canvas;
@@ -303,7 +298,6 @@ function compile(gl: WebGLRenderingContext, type: number, source: string) {
 type Props = {
   title: string;
   index: number;
-  tone?: "warm" | "dark" | "bright";
   /** Real project cover — framed in the same chrome window as placeholder tiles. */
   imageSrc?: string;
 };
@@ -318,7 +312,7 @@ function loadCover(src: string): Promise<HTMLImageElement> {
   });
 }
 
-export function ProjectWarp({ title, index, imageSrc, tone = "warm" }: Props) {
+export function ProjectWarp({ title, index, imageSrc }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -329,7 +323,7 @@ export function ProjectWarp({ title, index, imageSrc, tone = "warm" }: Props) {
     let cover: HTMLCanvasElement = poster;
     let cancelled = false;
 
-    const framedFrom = (img: HTMLImageElement) => makeCoverTexture(img, index, tone);
+    const framedFrom = (img: HTMLImageElement) => makeCoverTexture(img, index);
 
     const uploadTexture = (
       gl: WebGLRenderingContext,
@@ -536,7 +530,7 @@ export function ProjectWarp({ title, index, imageSrc, tone = "warm" }: Props) {
       gl.deleteShader(vertex);
       gl.deleteShader(fragment);
     };
-  }, [index, title, imageSrc, tone]);
+  }, [index, title, imageSrc]);
 
   return (
     <canvas
