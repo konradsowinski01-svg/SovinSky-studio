@@ -66,7 +66,7 @@ export const projects: Project[] = [
   {
     slug: "rrclub",
     title: "RRclub",
-    kind: "Aplikacja iOS & Android · w trakcie wdrażania",
+    kind: "Prywatna aplikacja pokerowa",
     year: "2026",
     tone: "dark",
     gradient: "linear-gradient(155deg, #1a1028 0%, #2a1840 40%, #050505 100%)",
