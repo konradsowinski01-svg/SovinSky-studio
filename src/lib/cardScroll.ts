@@ -32,6 +32,8 @@ type Cue = {
   deltaPx?: number;
   /** Wróć na samą górę strony. */
   toTop?: boolean;
+  /** Zjedź na sam dół (max scroll) — kontakt / footer. */
+  toBottom?: boolean;
   /** Po dojechaniu nie dryfuj dalej. */
   hold?: boolean;
   /** Krzywa: out = szybki zjazd + miękki stop, inout = wolniejszy powrót. */
@@ -48,8 +50,8 @@ const CUES: Cue[] = [
   { at: 13.4, duration: 1.4, anchor: "about", align: "center", offsetPx: -220 },
   // Usługi pod topbarem (po większej luce od opisu studia)
   { at: 16, duration: 1.4, anchor: "services", align: "top" },
-  // Lekki zjazd w głąb usług, potem powrót na górę
-  { at: 18.45, duration: 1.4, anchor: "services", align: "center", offsetPx: 80 },
+  // Ostatni zjazd: sam dół strony (kontakt)
+  { at: 18.45, duration: 1.4, toBottom: true },
   // Wolny powrót na home (hero / #top), potem odblokuj scroll.
   { at: 20.85, duration: 3.0, toTop: true, hold: true, ease: "inout" },
 ];
@@ -89,6 +91,7 @@ function anchorEl(name: string) {
 
 function anchorY(cue: Cue, fromY: number): number | null {
   if (cue.toTop) return 0;
+  if (cue.toBottom) return maxScroll();
   if (cue.deltaPx != null) return fromY + cue.deltaPx;
   if (!cue.anchor) return null;
   const el = anchorEl(cue.anchor);

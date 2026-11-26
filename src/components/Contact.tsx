@@ -45,7 +45,7 @@ export function Contact() {
   }, []);
 
   return (
-    <section id="contact" ref={sectionRef} className={styles.contact}>
+    <section id="contact" ref={sectionRef} className={styles.contact} data-card-anchor="contact">
       <div className={styles.grain} aria-hidden="true" />
       <h2 className="sr-only">Kontakt</h2>
       <p className={styles.label} data-fade="">
