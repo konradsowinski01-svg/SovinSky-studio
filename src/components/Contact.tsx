@@ -4,7 +4,7 @@ import { RollLink } from "./RollLink";
 import { TextSplit } from "./TextSplit";
 import styles from "./Contact.module.css";
 
-const LINE_DELAY_MS = 1000;
+const LINE_DELAY_MS = 700;
 
 export function Contact() {
   const mailto = `mailto:${site.email}`;
