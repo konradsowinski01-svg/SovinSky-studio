@@ -35,8 +35,8 @@ type Cue = {
 
 const CUES: Cue[] = [
   { at: 6, duration: 1.4, anchor: "work-heading", align: "top" },
-  { at: 8.8, duration: 1.4, anchor: "firma-online", align: "top" },
-  { at: 11, duration: 1.4, anchor: "kampania-sms", align: "center" },
+  { at: 8.8, duration: 1.4, anchor: "rrclub", align: "top" },
+  { at: 11, duration: 1.4, anchor: "rkm-trade", align: "center" },
   { at: 13.4, duration: 1.4, anchor: "about", align: "center", offsetPx: -220 },
   { at: 16, duration: 1.4, deltaPx: 400 },
   // 18.5 − 50 ms; po dojechaniu (+1.4) + 1 s pauzy → powrót na górę
