@@ -83,11 +83,13 @@ export const projects: Project[] = [
     cover: "projects/rkm-trade/cover.jpg",
   },
   {
-    slug: "kampania-sms",
-    title: "Kampania SMS",
-    kind: "Landing pod marketing",
-    year: "2025",
+    slug: "arngcor-web",
+    title: "ARNGCOR Web",
+    kind: "Strona produktowa · arngcor.pl",
+    year: "2026",
     tone: "warm",
     gradient: "linear-gradient(160deg, #c2410c 0%, #431407 50%, #050505 100%)",
+    href: "https://arngcor.pl",
+    cover: "projects/arngcor-web/cover.jpg",
   },
 ];
