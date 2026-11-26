@@ -48,10 +48,8 @@ export type Project = {
   tone: "dark" | "warm" | "bright";
   /** Zewnętrzny link (np. App Store). Bez tego — #contact. */
   href?: string;
-  /** Okładka / kolaż (ścieżka w `public/`). */
+  /** Okładka brandowa (ścieżka w `public/`). */
   cover?: string;
-  /** Realne screeny aplikacji pokazywane w kafelku. */
-  shots?: string[];
 };
 
 export const projects: Project[] = [
@@ -64,11 +62,6 @@ export const projects: Project[] = [
     gradient: "linear-gradient(145deg, #ff5a1f 0%, #9a3412 42%, #1a0a05 100%)",
     href: "https://apps.apple.com/app/arngcor/id6772146674",
     cover: "projects/arngcor/cover.jpg",
-    shots: [
-      "projects/arngcor/phone-1.jpg",
-      "projects/arngcor/phone-2.jpg",
-      "projects/arngcor/phone-3.jpg",
-    ],
   },
   {
     slug: "firma-online",
