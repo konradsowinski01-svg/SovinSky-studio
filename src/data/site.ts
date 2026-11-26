@@ -90,6 +90,6 @@ export const projects: Project[] = [
     tone: "warm",
     gradient: "linear-gradient(160deg, #c2410c 0%, #431407 50%, #050505 100%)",
     href: "https://arngcor.pl",
-    cover: "projects/arngcor-web/cover.jpg",
+    cover: "projects/arngcor-web/cover-v2.jpg",
   },
 ];
