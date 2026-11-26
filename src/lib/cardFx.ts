@@ -10,7 +10,7 @@ type FxCue = {
   run: () => void;
 };
 
-const FX: FxCue[] = [{ at: 5, run: whiteVignetteFlash }];
+const FX: FxCue[] = [{ at: 4.9, run: whiteVignetteFlash }];
 
 function whiteVignetteFlash() {
   const el = document.createElement("div");
@@ -23,7 +23,7 @@ function whiteVignetteFlash() {
     opacity: "0",
     background:
       "radial-gradient(ellipse at center, rgba(255,255,255,0) 18%, rgba(255,255,255,0.45) 55%, rgba(255,255,255,0.92) 100%)",
-    transition: "opacity 120ms ease-out",
+    transition: "opacity 140ms ease-out",
   } as CSSStyleDeclaration);
 
   document.body.appendChild(el);
@@ -31,15 +31,15 @@ function whiteVignetteFlash() {
     el.style.opacity = "1";
   });
 
-  // 500 ms łącznie: krótki peak, potem zgaszenie.
+  // 700 ms łącznie: peak, potem zgaszenie.
   window.setTimeout(() => {
-    el.style.transition = "opacity 320ms ease-in";
+    el.style.transition = "opacity 420ms ease-in";
     el.style.opacity = "0";
-  }, 180);
+  }, 260);
 
   window.setTimeout(() => {
     el.remove();
-  }, 520);
+  }, 720);
 }
 
 export function runCardFx(audio: HTMLAudioElement) {
