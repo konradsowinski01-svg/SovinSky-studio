@@ -37,13 +37,13 @@ const CUES: Cue[] = [
   { at: 6, duration: 1.4, anchor: "work-heading", align: "top" },
   { at: 8.8, duration: 1.4, anchor: "rrclub", align: "top" },
   { at: 11, duration: 1.4, anchor: "rkm-trade", align: "center" },
-  { at: 13.4, duration: 1.4, anchor: "arngcor-web", align: "center" },
-  { at: 15.2, duration: 1.3, anchor: "about", align: "center", offsetPx: -220 },
-  { at: 17.2, duration: 1.4, deltaPx: 400 },
+  // Bez 4. kafelka — od razu About, potem dryf i powrót na górę.
+  { at: 13.4, duration: 1.4, anchor: "about", align: "center", offsetPx: -220 },
+  { at: 16, duration: 1.4, deltaPx: 400 },
   // 18.5 − 50 ms; po dojechaniu (+1.4) + 1 s pauzy → powrót na górę
-  { at: 19.5, duration: 1.4, deltaPx: 800 },
+  { at: 18.45, duration: 1.4, deltaPx: 800 },
   // Wolny powrót na home (hero / #top), potem odblokuj scroll.
-  { at: 21.9, duration: 3.0, toTop: true, hold: true, ease: "inout" },
+  { at: 20.85, duration: 3.0, toTop: true, hold: true, ease: "inout" },
 ];
 
 const easeOutQuart = (t: number) => 1 - (1 - t) ** 4;
