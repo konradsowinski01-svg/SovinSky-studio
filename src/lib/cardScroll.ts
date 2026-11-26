@@ -6,7 +6,7 @@ import { getLenis } from "./lenisStore";
  */
 
 /** Cisza wklejona na początku card-intro.mp3. */
-const LEAD_IN_SEC = 0.95;
+const LEAD_IN_SEC = 0.9;
 /** Odstęp nagłówka od dolnej krawędzi topbara. */
 const ANCHOR_GAP_PX = 24;
 /** „Bardzo powoli” po dojechaniu do celu. */
