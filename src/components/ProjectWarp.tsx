@@ -145,7 +145,7 @@ void main() {
   gl_FragColor = vec4(outC, outA);
 }`;
 
-const palettes = [
+const palettes: [string, string, string][] = [
   ["#f43b16", "#78180e", "#100b09"],
   ["#ff7a19", "#542006", "#0d0906"],
   ["#ff9a3d", "#a52f08", "#130a05"],
@@ -159,11 +159,10 @@ function paintCardShell(
   index: number,
   opts?: { hot?: string; deep?: string; dark?: string },
 ) {
-  const [hot, deep, dark] = [
-    opts?.hot ?? palettes[index % palettes.length]![0],
-    opts?.deep ?? palettes[index % palettes.length]![1],
-    opts?.dark ?? palettes[index % palettes.length]![2],
-  ];
+  const fallback = palettes[index % palettes.length]!;
+  const hot = opts?.hot ?? fallback[0];
+  const deep = opts?.deep ?? fallback[1];
+  const dark = opts?.dark ?? fallback[2];
   const bg = ctx.createLinearGradient(0, 0, 1280, 720);
   bg.addColorStop(0, hot);
   bg.addColorStop(0.5, deep);
