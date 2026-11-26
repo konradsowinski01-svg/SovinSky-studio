@@ -11,11 +11,11 @@ type FxCue = {
 };
 
 const FX: FxCue[] = [
-  { at: 4.84, run: () => sideEdgeFlash(700) },
-  { at: 7, run: () => sideEdgeFlash(800) },
+  { at: 4.84, run: () => sideEdgeFlash(900) },
+  { at: 7, run: () => sideEdgeFlash(1000) },
 ];
 
-/** Biały flash tylko z lewej/prawej krawędzi — miękki, blisko brzegów. */
+/** Pomarańczowy flash tylko z lewej/prawej krawędzi — miękki, blisko brzegów. */
 function sideEdgeFlash(durationMs: number) {
   const fadeIn = Math.min(220, durationMs * 0.28);
   const fadeOut = Math.min(520, durationMs * 0.62);
@@ -30,7 +30,7 @@ function sideEdgeFlash(durationMs: number) {
     pointerEvents: "none",
     opacity: "0",
     background:
-      "linear-gradient(90deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.22) 6%, rgba(255,255,255,0.06) 12%, transparent 18%, transparent 82%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.22) 94%, rgba(255,255,255,0.62) 100%)",
+      "linear-gradient(90deg, rgba(255,106,0,0.72) 0%, rgba(255,106,0,0.28) 6%, rgba(255,106,0,0.08) 12%, transparent 18%, transparent 82%, rgba(255,106,0,0.08) 88%, rgba(255,106,0,0.28) 94%, rgba(255,106,0,0.72) 100%)",
     transition: `opacity ${fadeIn}ms ease-in-out`,
   } as CSSStyleDeclaration);
 
