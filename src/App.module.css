@@ -8,6 +8,13 @@
   pointer-events: none;
 }
 
+/* Pod CardIntro: DOM + WebGL + Lenis żyją, user jeszcze nie widzi. */
+.warming {
+  visibility: visible;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .revealed {
   visibility: visible;
   animation: reveal 0.65s var(--ease-reveal) forwards;

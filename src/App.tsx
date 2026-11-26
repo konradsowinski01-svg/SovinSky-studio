@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { About } from "./components/About";
 import { AboutPage } from "./components/AboutPage";
@@ -19,13 +19,17 @@ import { isCardEntry, useRoute } from "./lib/router";
 import styles from "./App.module.css";
 
 export default function App() {
+  const cardEntry = useRef(isCardEntry()).current;
+  /** Systemy (Lenis, motion, WebGL) — na #/w od razu pod czarnym intro. */
+  const [booted, setBooted] = useState(cardEntry);
+  /** Wizualny reveal home (fade z intro). */
   const [ready, setReady] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
-  const cardEntry = useRef(isCardEntry()).current;
   const doneRef = useRef(false);
   const revealHome = useCallback(() => {
     if (doneRef.current) return;
     doneRef.current = true;
+    setBooted(true);
     setReady(true);
   }, []);
   const dismissIntro = useCallback(() => {
@@ -36,8 +40,27 @@ export default function App() {
     dismissIntro();
   }, [dismissIntro, revealHome]);
   const route = useRoute();
-  useLenis(ready);
-  usePageMotion(ready && route === "home");
+  useLenis(booted);
+  usePageMotion(booted && route === "home");
+
+  // Po bootcie dograj layout — home ma być „na gotowo” zanim zniknie czarny ekran.
+  useLayoutEffect(() => {
+    if (!booted) return;
+    const lenis = getLenis();
+    lenis?.resize();
+    ScrollTrigger.refresh();
+    window.scrollTo(0, 0);
+    lenis?.scrollTo(0, { immediate: true, force: true });
+  }, [booted]);
+
+  useEffect(() => {
+    if (!booted) return;
+    const id = window.setTimeout(() => {
+      getLenis()?.resize();
+      ScrollTrigger.refresh();
+    }, 450);
+    return () => window.clearTimeout(id);
+  }, [booted]);
 
   const firstRoute = useRef(true);
   useLayoutEffect(() => {
@@ -70,7 +93,7 @@ export default function App() {
       ) : null}
       <div
         id="top"
-        className={`${styles.app} ${ready ? styles.revealed : styles.hidden}`}
+        className={`${styles.app} ${ready ? styles.revealed : booted ? styles.warming : styles.hidden}`}
         aria-hidden={!ready}
       >
         <AmbientFractals />
