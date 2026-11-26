@@ -11,8 +11,8 @@ type FxCue = {
 };
 
 const FX: FxCue[] = [
-  { at: 4.84, run: () => sideEdgeFlash(1200) },
-  { at: 7, run: () => sideEdgeFlash(1200) },
+  { at: 4.79, run: () => sideEdgeFlash(1200) },
+  { at: 7.08, run: () => sideEdgeFlash(1200) },
   { at: 9.67, run: () => sideEdgeFlash(1200) },
   { at: 11.9, run: () => sideEdgeFlash(1200) },
 ];
