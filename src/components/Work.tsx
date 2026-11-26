@@ -35,7 +35,7 @@ export function Work() {
                   : {})}
                 aria-label={
                   project.href
-                    ? `${project.title}: otwórz w App Store`
+                    ? `${project.title}: otwórz projekt`
                     : `${project.title}: napisz w sprawie podobnego projektu`
                 }
               >

@@ -79,6 +79,7 @@ export const projects: Project[] = [
     year: "2026",
     tone: "bright",
     gradient: "linear-gradient(135deg, #fb923c 0%, #ea580c 35%, #111111 100%)",
+    href: "https://rkmtrade.pl",
     cover: "projects/rkm-trade/cover.jpg",
   },
   {
