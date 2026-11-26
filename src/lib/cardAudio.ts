@@ -1,6 +1,6 @@
 /**
  * `#/w` — zwykły play() w geście tapnięcia.
- * Opóźnienie 1000 ms jest wklejone w plik jako cisza: Safari blokuje
+ * Opóźnienie 950 ms jest wklejone w plik jako cisza: Safari blokuje
  * dźwięk odpalany/odciszany z timera poza gestem.
  */
 
