@@ -95,6 +95,7 @@ export default function App() {
         id="top"
         className={`${styles.app} ${ready ? styles.revealed : booted ? styles.warming : styles.hidden}`}
         aria-hidden={!ready}
+        data-ready={ready ? "true" : "false"}
       >
         <Topbar route={route} />
         {route === "portfolio" ? (
@@ -103,7 +104,7 @@ export default function App() {
           <AboutPage />
         ) : (
           <main id="main">
-            <Hero />
+            <Hero effectsReady={ready} />
             <DnaField>
               <Work />
               <About />

@@ -5,13 +5,18 @@ import { TextSplit } from "./TextSplit";
 import { Wordmark } from "./Wordmark";
 import styles from "./Hero.module.css";
 
-export function Hero() {
+type Props = {
+  /** Mount WebGL wave only after intro reveal — avoid GPU burn under black screen. */
+  effectsReady?: boolean;
+};
+
+export function Hero({ effectsReady = true }: Props) {
   const clock = useClock(site.location);
 
   return (
     <section id="hero" className={styles.hero} aria-label="Wstęp">
       <div className={styles.inner} data-hero-inner="">
-        <HeroWave className={styles.wave} />
+        {effectsReady ? <HeroWave className={styles.wave} /> : null}
         <Wordmark widthRatio={1.48} />
         <div className={styles.fade} aria-hidden="true" data-hero-fade="" />
         <div className={styles.copy} data-hero-copy="">

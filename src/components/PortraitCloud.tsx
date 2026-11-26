@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { canvasDpr, getMotionTier } from "../lib/motionTier";
+import { onPageActivity } from "../lib/pageActivity";
 import styles from "./PortraitCloud.module.css";
 
 const SRC = `${import.meta.env.BASE_URL}dna-helix.obj`;
@@ -20,6 +21,8 @@ type Dot = {
   a: number;
   seed: number;
 };
+
+type Proj = { px: number; py: number; pr: number; pa: number; z: number };
 
 function hash(n: number) {
   const s = Math.sin(n * 127.1) * 43758.5453;
@@ -160,7 +163,7 @@ function buildDotsFromObj(text: string, maxDots: number): Dot[] {
   return dots.filter((_, i) => i % stride === 0).slice(0, maxDots);
 }
 
-function project(
+function projectInline(
   x: number,
   y: number,
   z: number,
@@ -168,13 +171,16 @@ function project(
   sinY: number,
   cosP: number,
   sinP: number,
+  out: { x: number; y: number; z: number; p: number },
 ) {
   const rx = x * cosY - z * sinY;
   const rz = x * sinY + z * cosY;
   const y2 = y * cosP - rz * sinP;
   const z2 = y * sinP + rz * cosP;
-  const perspective = 1.45 / (1.45 + z2);
-  return { x: rx, y: y2, z: z2, p: perspective };
+  out.x = rx;
+  out.y = y2;
+  out.z = z2;
+  out.p = 1.45 / (1.45 + z2);
 }
 
 export function PortraitCloud() {
@@ -183,22 +189,28 @@ export function PortraitCloud() {
   useEffect(() => {
     const canvas = hostRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
     let dots: Dot[] = [];
     let visible = false;
+    let pageOn = true;
     let raf = 0;
     let running = true;
     let angle = 0.35;
     let lastTs = performance.now();
     let lastDrawTs = 0;
+    let drawFrame = 0;
+    let cssW = 0;
+    let cssH = 0;
+    let cssTop = 0;
     const tier = getMotionTier();
     const reduceMotion =
       tier === "low" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const maxDots =
       tier === "low" ? MAX_DOTS_LOW : tier === "medium" ? MAX_DOTS_MEDIUM : MAX_DOTS_HIGH;
     const frameBudgetMs = tier === "low" ? 48 : tier === "medium" ? 33 : 0;
+    const fbmOctaves = tier === "high" ? 3 : 2;
 
     // Cursor / finger magnet — only on the DNA region.
     let pointerX = 0;
@@ -211,9 +223,15 @@ export function PortraitCloud() {
     const magnetsEnabled = tier === "high" && !reduceMotion;
     type Spark = { x: number; y: number; vx: number; vy: number; life: number; seed: number; r: number };
     const sparks: Spark[] = [];
-    const SPARK_CAP = magnetsEnabled ? (coarse ? 70 : 70) : 0;
+    const SPARK_CAP = magnetsEnabled ? 70 : 0;
 
-    // Cache expensive layout / theme reads — avoid layout thrash every rAF.
+    // Reused projection scratch — no per-frame object alloc for 18k dots.
+    const projected: Proj[] = [];
+    const scratch = { x: 0, y: 0, z: 0, p: 1 };
+    let driftX = new Float32Array(0);
+    let driftY = new Float32Array(0);
+    let driftZ = new Float32Array(0);
+
     let layoutCache = {
       aboutW: 0,
       aboutH: 0,
@@ -221,6 +239,20 @@ export function PortraitCloud() {
       contactTop: 0,
       light: false,
       at: 0,
+    };
+
+    // Quantized alpha fillStyles to avoid string alloc per dot.
+    const ALPHA_BUCKETS = 32;
+    const darkFills: string[] = [];
+    const lightFills: string[] = [];
+    for (let i = 0; i < ALPHA_BUCKETS; i++) {
+      const a = ((i + 1) / ALPHA_BUCKETS).toFixed(3);
+      darkFills.push(`rgba(255, 140, 40, ${a})`);
+      lightFills.push(`rgba(28, 8, 2, ${a})`);
+    }
+    const fillFor = (light: boolean, alpha: number) => {
+      const bucket = Math.max(0, Math.min(ALPHA_BUCKETS - 1, Math.floor(alpha * ALPHA_BUCKETS) - 1));
+      return light ? lightFills[bucket]! : darkFills[bucket]!;
     };
 
     const isLightBg = () => {
@@ -234,8 +266,16 @@ export function PortraitCloud() {
       return 0.299 * r + 0.587 * g + 0.114 * b > 140;
     };
 
-    const resize = () => {
+    const syncCssBox = () => {
       const rect = canvas.getBoundingClientRect();
+      cssW = rect.width;
+      cssH = rect.height;
+      cssTop = rect.top;
+      return rect;
+    };
+
+    const resize = () => {
+      const rect = syncCssBox();
       const dpr = canvasDpr(tier);
       canvas.width = Math.max(1, Math.floor(rect.width * dpr));
       canvas.height = Math.max(1, Math.floor(rect.height * dpr));
@@ -243,18 +283,20 @@ export function PortraitCloud() {
       layoutCache.at = 0;
     };
 
-    const refreshLayout = (rect: DOMRect, w: number, h: number, force = false) => {
+    const refreshLayout = (w: number, h: number, force = false) => {
       const now = performance.now();
       if (!force && now - layoutCache.at < 120) return layoutCache;
+      // Keep top in sync with scroll without full resize.
+      cssTop = canvas.getBoundingClientRect().top;
       const about = document.getElementById("about");
       const aboutRect = about?.getBoundingClientRect();
       const lastProj = document.querySelector<HTMLElement>("#work [data-proj]:last-of-type");
       const fadeAnchor = lastProj
-        ? lastProj.getBoundingClientRect().bottom - rect.top
-        : (document.getElementById("work")?.getBoundingClientRect().bottom ?? 0) - rect.top;
+        ? lastProj.getBoundingClientRect().bottom - cssTop
+        : (document.getElementById("work")?.getBoundingClientRect().bottom ?? 0) - cssTop;
       const contact = document.getElementById("contact");
       const contactTop = contact
-        ? contact.getBoundingClientRect().top - rect.top
+        ? contact.getBoundingClientRect().top - cssTop
         : h * 0.85;
       layoutCache = {
         aboutW: aboutRect?.width || w,
@@ -267,20 +309,27 @@ export function PortraitCloud() {
       return layoutCache;
     };
 
-    const driftOf = (d: Dot, t: number) => {
-      const amp = DRIFT;
-      return {
-        x: d.x + (fbm(t * 0.4 + d.seed) - 0.5) * 2 * amp,
-        y: d.y + (fbm(t * 0.36 + d.seed + 17.2) - 0.5) * 2 * amp,
-        z: d.z + (fbm(t * 0.33 + d.seed + 41.7) - 0.5) * 2 * amp,
-      };
+    const ensureProjected = (n: number) => {
+      while (projected.length < n) {
+        projected.push({ px: 0, py: 0, pr: 0, pa: 0, z: 0 });
+      }
+      if (driftX.length !== n) {
+        driftX = new Float32Array(n);
+        driftY = new Float32Array(n);
+        driftZ = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+          driftX[i] = dots[i]!.x;
+          driftY[i] = dots[i]!.y;
+          driftZ[i] = dots[i]!.z;
+        }
+      }
     };
 
     const draw = (tSec = 0) => {
       if (!dots.length) return false;
-      const rect = canvas.getBoundingClientRect();
-      const w = rect.width;
-      const h = rect.height;
+      const w = cssW;
+      const h = cssH;
+      if (w < 1 || h < 1) return false;
       ctx.clearRect(0, 0, w, h);
 
       const cosY = Math.cos(angle);
@@ -288,25 +337,20 @@ export function PortraitCloud() {
       const cosP = Math.cos(PITCH);
       const sinP = Math.sin(PITCH);
 
-      // Size from About; pin helix to viewport mid on every breakpoint so
-      // DNA holds still while Work / About / Contact scroll past it.
-      const layout = refreshLayout(rect, w, h);
+      const layout = refreshLayout(w, h);
       const mobile = w < 810;
       const refW = layout.aboutW;
       const refH = layout.aboutH;
       const scale = Math.min(refW, Math.min(refH, window.innerHeight)) * (mobile ? 1.85 : 2.55);
       const ox = w * (mobile ? 0.62 : 0.74);
-      const oy = window.innerHeight * 0.5 - rect.top;
+      const oy = window.innerHeight * 0.5 - cssTop;
       const light = layout.light;
 
-      // Soft reveal starting around the last Work tile ("Kampania SMS"),
-      // so DNA gently appears as the project list ends.
       const fadeAnchor = layout.fadeAnchor;
       const fadeInStart = fadeAnchor - Math.min(220, h * 0.1);
       const fadeInEnd = fadeInStart + Math.min(h * 0.42, window.innerHeight * 0.85);
 
       const contactTop = layout.contactTop;
-      // Soft bottom trim only — helix anchor (oy) unchanged, just shorter below.
       const bottomTrim = 270;
       const fadeOutStart = contactTop + Math.min(h * 0.08, 100) - bottomTrim;
       const fadeOutEnd = h * 0.98 - bottomTrim;
@@ -316,7 +360,6 @@ export function PortraitCloud() {
         if (py <= fadeInStart) f = 0;
         else if (py < fadeInEnd) {
           const t = (py - fadeInStart) / Math.max(1, fadeInEnd - fadeInStart);
-          // Slow ease-in over a long stretch — stays ghostly, then fills in.
           f = t * t * (3 - 2 * t);
           f *= f;
         }
@@ -337,48 +380,73 @@ export function PortraitCloud() {
         pointerY > fadeInStart - (coarse ? 40 : 0) &&
         pointerY < fadeOutEnd;
 
-      const projected = dots
-        .map((d) => {
-          const drifted = reduceMotion ? d : driftOf(d, tSec);
-          const p = project(drifted.x, drifted.y, drifted.z, cosY, sinY, cosP, sinP);
-          const depth = Math.max(0, Math.min(1, (p.z + 0.55) / 1.1));
-          let px = ox + p.x * scale * p.p;
-          let py = oy - p.y * scale * p.p;
-          let pr = d.r * p.p * (1.05 + depth * 0.4) * (light ? 1.2 : 1.1);
-          // Mobile: dial DNA down so About copy stays readable over the helix.
-          const opacityMul = mobile ? (light ? 0.42 : 0.48) : 1;
-          let pa =
-            d.a * (0.7 + depth * 0.45) * (light ? 1.35 : 1.15) * edgeFadeAt(py) * opacityMul;
+      // Drift is tiny — recompute every 2nd frame; reuse cached pose on the odd frame.
+      const doDrift = !reduceMotion && drawFrame % 2 === 0;
+      drawFrame++;
+      const n = dots.length;
+      ensureProjected(n);
+      const opacityMul = mobile ? (light ? 0.42 : 0.48) : 1;
+      const sizeMul = light ? 1.2 : 1.1;
+      const alphaMul = light ? 1.35 : 1.15;
 
-          if (magnet > 0.02) {
-            const dx = pointerX - px;
-            const dy = pointerY - py;
-            const dist = Math.hypot(dx, dy);
-            if (dist < magnetR && dist > 0.001) {
-              const t = 1 - dist / magnetR;
-              const pull = t * t * (coarse ? 0.72 : 0.55) * magnet;
-              px += dx * pull;
-              py += dy * pull;
-              pa *= 1 + t * (coarse ? 0.9 : 0.65) * magnet;
-              pr *= 1 + t * 0.25 * magnet;
-            }
+      for (let i = 0; i < n; i++) {
+        const d = dots[i]!;
+        if (doDrift) {
+          driftX[i] = d.x + (fbm(tSec * 0.4 + d.seed, fbmOctaves) - 0.5) * 2 * DRIFT;
+          driftY[i] = d.y + (fbm(tSec * 0.36 + d.seed + 17.2, fbmOctaves) - 0.5) * 2 * DRIFT;
+          driftZ[i] = d.z + (fbm(tSec * 0.33 + d.seed + 41.7, fbmOctaves) - 0.5) * 2 * DRIFT;
+        }
+        const dx = reduceMotion ? d.x : driftX[i]!;
+        const dy = reduceMotion ? d.y : driftY[i]!;
+        const dz = reduceMotion ? d.z : driftZ[i]!;
+        projectInline(dx, dy, dz, cosY, sinY, cosP, sinP, scratch);
+        const depth = Math.max(0, Math.min(1, (scratch.z + 0.55) / 1.1));
+        let px = ox + scratch.x * scale * scratch.p;
+        let py = oy - scratch.y * scale * scratch.p;
+        let pr = d.r * scratch.p * (1.05 + depth * 0.4) * sizeMul;
+        let pa = d.a * (0.7 + depth * 0.45) * alphaMul * edgeFadeAt(py) * opacityMul;
+
+        if (magnet > 0.02) {
+          const mdx = pointerX - px;
+          const mdy = pointerY - py;
+          const dist = Math.hypot(mdx, mdy);
+          if (dist < magnetR && dist > 0.001) {
+            const t = 1 - dist / magnetR;
+            const pull = t * t * (coarse ? 0.72 : 0.55) * magnet;
+            px += mdx * pull;
+            py += mdy * pull;
+            pa *= 1 + t * (coarse ? 0.9 : 0.65) * magnet;
+            pr *= 1 + t * 0.25 * magnet;
           }
+        }
 
-          return { px, py, pr, pa, z: p.z };
-        })
-        .sort((a, b) => a.z - b.z);
+        const slot = projected[i]!;
+        slot.px = px;
+        slot.py = py;
+        slot.pr = pr;
+        slot.pa = pa;
+        slot.z = scratch.z;
+      }
 
-      for (const d of projected) {
+      // In-place sort by depth (reuse buffer — no new array).
+      projected.length = n;
+      projected.sort((a, b) => a.z - b.z);
+
+      let lastBucket = -1;
+      for (let i = 0; i < n; i++) {
+        const d = projected[i]!;
         if (d.px < -8 || d.py < -8 || d.px > w + 8 || d.py > h + 8) continue;
         if (d.pa < 0.04) continue;
         const alpha = Math.min(1, d.pa);
-        ctx.fillStyle = light
-          ? `rgba(28, 8, 2, ${alpha.toFixed(3)})`
-          : `rgba(255, 140, 40, ${alpha.toFixed(3)})`;
-        ctx.fillRect(d.px, d.py, Math.max(0.85, d.pr), Math.max(0.85, d.pr));
+        const bucket = Math.max(0, Math.min(ALPHA_BUCKETS - 1, Math.floor(alpha * ALPHA_BUCKETS) - 1));
+        if (bucket !== lastBucket) {
+          ctx.fillStyle = fillFor(light, alpha);
+          lastBucket = bucket;
+        }
+        const s = Math.max(0.85, d.pr);
+        ctx.fillRect(d.px, d.py, s, s);
       }
 
-      // Extra fractals that gather around the cursor like filings on a magnet.
       if (magnet > 0.05 || sparks.length) {
         const target = Math.floor(SPARK_CAP * magnet);
         while (sparks.length < target) {
@@ -403,8 +471,8 @@ export function PortraitCloud() {
           const dy = pointerY - s.y;
           const dist = Math.hypot(dx, dy) || 1;
           const pull = (coarse ? 3.6 : 2.8) * magnet;
-          s.vx += (dx / dist) * pull * 0.55 + (fbm(tSec * 1.2 + s.seed) - 0.5) * 1.4;
-          s.vy += (dy / dist) * pull * 0.55 + (fbm(tSec * 1.1 + s.seed + 9) - 0.5) * 1.4;
+          s.vx += (dx / dist) * pull * 0.55 + (fbm(tSec * 1.2 + s.seed, 2) - 0.5) * 1.4;
+          s.vy += (dy / dist) * pull * 0.55 + (fbm(tSec * 1.1 + s.seed + 9, 2) - 0.5) * 1.4;
           s.vx *= 0.86;
           s.vy *= 0.86;
           s.x += s.vx;
@@ -416,20 +484,21 @@ export function PortraitCloud() {
           }
           const a = Math.min(1, s.life * (0.55 + magnet * 0.55) * (light ? 0.95 : 0.8));
           if (a < 0.04) continue;
-          ctx.fillStyle = light
-            ? `rgba(28, 8, 2, ${a.toFixed(3)})`
-            : `rgba(255, 140, 40, ${a.toFixed(3)})`;
-          ctx.fillRect(s.x, s.y, Math.max(0.55, s.r), Math.max(0.55, s.r));
+          ctx.fillStyle = fillFor(light, a);
+          const sz = Math.max(0.55, s.r);
+          ctx.fillRect(s.x, s.y, sz, sz);
         }
       }
 
       return wantMagnet;
     };
 
+    const canRun = () => running && visible && pageOn && dots.length > 0;
+
     const tick = (ts: number) => {
       if (!running) return;
       raf = 0;
-      if (!visible) return;
+      if (!visible || !pageOn) return;
       const dt = Math.min(0.05, (ts - lastTs) / 1000);
       lastTs = ts;
       if (!reduceMotion) angle -= IDLE_SPEED * dt;
@@ -439,39 +508,49 @@ export function PortraitCloud() {
         lastDrawTs = ts;
         wantMagnet = draw(ts * 0.001);
       }
-      // Snap on under a finger; linger a bit after lift so the effect reads on mobile.
       const magnetLerp = wantMagnet ? (coarse ? 10 : 7) : coarse ? 2.2 : 5;
       magnet += ((wantMagnet ? 1 : 0) - magnet) * Math.min(1, dt * magnetLerp);
       raf = requestAnimationFrame(tick);
     };
 
     const kick = () => {
-      if (!running || raf || !visible || !dots.length) return;
+      if (!canRun() || raf) return;
       lastTs = performance.now();
       raf = requestAnimationFrame(tick);
     };
 
+    const stopRaf = () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
     const ro = new ResizeObserver(() => {
       resize();
-      if (visible) draw(performance.now() * 0.001);
+      if (visible && pageOn) draw(performance.now() * 0.001);
     });
     ro.observe(canvas);
 
     const io = new IntersectionObserver(
       ([entry]) => {
         visible = entry?.isIntersecting ?? false;
-        if (visible) kick();
-        else if (raf) {
-          cancelAnimationFrame(raf);
-          raf = 0;
-        }
+        if (visible && pageOn) kick();
+        else stopRaf();
       },
       { rootMargin: "80px" },
     );
     io.observe(canvas);
 
+    const offActivity = onPageActivity((active) => {
+      pageOn = active;
+      if (active) kick();
+      else stopRaf();
+    }, { requireReady: true });
+
     const syncPointer = (e: PointerEvent, pressed?: boolean) => {
       const rect = canvas.getBoundingClientRect();
+      cssTop = rect.top;
       pointerX = e.clientX - rect.left;
       pointerY = e.clientY - rect.top;
       const inBounds =
@@ -480,7 +559,6 @@ export function PortraitCloud() {
         e.clientY >= rect.top &&
         e.clientY <= rect.bottom;
       if (typeof pressed === "boolean") pointerPressed = pressed;
-      // Desktop: hover. Touch: only while finger is down (under the finger).
       pointerOn = canHover && e.pointerType === "mouse" ? inBounds : pointerPressed && inBounds;
     };
     const onPointerMove = (e: PointerEvent) => syncPointer(e);
@@ -507,6 +585,7 @@ export function PortraitCloud() {
       .then((text) => {
         if (cancelled) return;
         dots = buildDotsFromObj(text, maxDots);
+        ensureProjected(dots.length);
         resize();
         kick();
       })
@@ -515,9 +594,10 @@ export function PortraitCloud() {
     return () => {
       cancelled = true;
       running = false;
-      cancelAnimationFrame(raf);
+      stopRaf();
       ro.disconnect();
       io.disconnect();
+      offActivity();
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);

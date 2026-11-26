@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { canvasDpr, getMotionTier } from "../lib/motionTier";
+import { onPageActivity } from "../lib/pageActivity";
 import styles from "./PolaroidPortrait.module.css";
 
 const SRC = `${import.meta.env.BASE_URL}about-portrait.jpg`;
@@ -443,12 +444,30 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       }
     };
 
+    let idleInView = true;
+    let pageOn = true;
+
+    const stopIdleRaf = () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
     const idleTick = (now: number) => {
-      if (cancelled || !baked || !idle) return;
+      if (cancelled || !baked || !idle || !idleInView || !pageOn) {
+        raf = 0;
+        return;
+      }
       const live = wrap.getBoundingClientRect();
       sizeOverlay(false);
       octx.clearRect(0, 0, viewW, viewH);
       drawOrbiters(now, live);
+      raf = requestAnimationFrame(idleTick);
+    };
+
+    const kickIdle = () => {
+      if (cancelled || !idle || !allowIdleOrbit || !idleInView || !pageOn || raf) return;
       raf = requestAnimationFrame(idleTick);
     };
 
@@ -463,7 +482,7 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       if (!allowIdleOrbit) return;
       orbiters = buildOrbitShards(ORBIT_COUNT);
       overlay.classList.add(styles.overlayLive);
-      raf = requestAnimationFrame(idleTick);
+      kickIdle();
     };
 
     const setup = () => {
@@ -563,10 +582,34 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
     };
     window.addEventListener("resize", onResize);
 
+    const idleIo = new IntersectionObserver(
+      ([entry]) => {
+        idleInView = entry?.isIntersecting ?? false;
+        if (idleInView && pageOn) kickIdle();
+        else if (idle) {
+          stopIdleRaf();
+          octx.clearRect(0, 0, viewW, viewH);
+        }
+      },
+      { rootMargin: "40px" },
+    );
+    idleIo.observe(wrap);
+
+    const offActivity = onPageActivity((active) => {
+      pageOn = active;
+      if (active) kickIdle();
+      else if (idle) {
+        stopIdleRaf();
+        octx.clearRect(0, 0, viewW, viewH);
+      }
+    });
+
     return () => {
       cancelled = true;
       idle = false;
-      cancelAnimationFrame(raf);
+      stopIdleRaf();
+      idleIo.disconnect();
+      offActivity();
       window.removeEventListener("resize", onResize);
     };
   }, []);

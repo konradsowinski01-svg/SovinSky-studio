@@ -176,19 +176,39 @@ export function usePageMotion(ready: boolean) {
         });
 
         let boost = 0;
+        let ticking = false;
+        const tick = () => {
+          boost *= 0.9;
+          const target = state.base + boost;
+          const delta = target - state.blur;
+          if (Math.abs(delta) < 0.01 && boost < 0.02) {
+            state.blur = Math.abs(target) < 0.01 ? 0 : target;
+            apply();
+            // Fully settled — drop perpetual SVG filter updates until scroll velocity.
+            if (state.base < 0.01 && state.blur < 0.01) {
+              gsap.ticker.remove(tick);
+              ticking = false;
+            }
+            return;
+          }
+          state.blur += delta * 0.14;
+          apply();
+        };
+        const ensureTick = () => {
+          if (ticking) return;
+          gsap.ticker.add(tick);
+          ticking = true;
+        };
+        ensureTick();
         cleanups.push(
           onVelocity((v) => {
             boost = Math.min(12, Math.abs(v) * 0.42);
+            if (boost > 0.05) ensureTick();
           }),
         );
-
-        const tick = () => {
-          boost *= 0.9;
-          state.blur += (state.base + boost - state.blur) * 0.14;
-          apply();
-        };
-        gsap.ticker.add(tick);
-        cleanups.push(() => gsap.ticker.remove(tick));
+        cleanups.push(() => {
+          if (ticking) gsap.ticker.remove(tick);
+        });
       });
 
       // --- Work cards ---------------------------------------------------

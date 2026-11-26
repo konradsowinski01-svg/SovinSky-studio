@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { onVelocity } from "../lib/lenisStore";
 import { canvasDpr, getMotionTier } from "../lib/motionTier";
+import { onPageActivity } from "../lib/pageActivity";
 import styles from "./ProjectWarp.module.css";
 
 const VERTEX = `
@@ -326,8 +327,12 @@ export function ProjectWarp({ title, index }: Props) {
 
     const start = performance.now();
     let frame = 0;
+    let inView = false;
+    let pageOn = true;
     let active = false;
     let lastRectAt = 0;
+    let frameSkip = 0;
+    let intersectionRatio = 0;
     let cachedParentRect = { top: 0, height: 1, width: 1 };
 
     const render = (now: number) => {
@@ -338,6 +343,16 @@ export function ProjectWarp({ title, index }: Props) {
       frame = requestAnimationFrame(render);
       smoothVelocity += (targetVelocity - smoothVelocity) * 0.12;
       targetVelocity *= 0.92;
+
+      // Edge of viewport: draw every other frame — last image stays on canvas.
+      const lightEdge = intersectionRatio > 0 && intersectionRatio < 0.22;
+      if (lightEdge) {
+        frameSkip ^= 1;
+        if (frameSkip) return;
+      } else {
+        frameSkip = 0;
+      }
+
       if (now - lastRectAt > 32) {
         lastRectAt = now;
         const parent = canvas.parentElement ?? canvas;
@@ -359,26 +374,41 @@ export function ProjectWarp({ title, index }: Props) {
       if (active && !frame) frame = requestAnimationFrame(render);
     };
 
+    const syncActive = () => {
+      const next = inView && pageOn;
+      if (next === active) {
+        if (next) kick();
+        return;
+      }
+      active = next;
+      if (active) kick();
+      else if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      }
+    };
+
     const io = new IntersectionObserver(
       ([entry]) => {
-        const next = entry?.isIntersecting ?? false;
-        if (next === active) return;
-        active = next;
-        if (active) kick();
-        else if (frame) {
-          cancelAnimationFrame(frame);
-          frame = 0;
-        }
+        inView = entry?.isIntersecting ?? false;
+        intersectionRatio = entry?.intersectionRatio ?? 0;
+        syncActive();
       },
-      { rootMargin: "12% 0px", threshold: 0.01 },
+      { rootMargin: "12% 0px", threshold: [0, 0.01, 0.15, 0.25, 0.5, 1] },
     );
     io.observe(canvas.parentElement ?? canvas);
+
+    const offActivity = onPageActivity((on) => {
+      pageOn = on;
+      syncActive();
+    }, { requireReady: true });
 
     return () => {
       active = false;
       cancelAnimationFrame(frame);
       observer.disconnect();
       io.disconnect();
+      offActivity();
       unsubscribe();
       gl.deleteTexture(texture);
       gl.deleteBuffer(buffer);

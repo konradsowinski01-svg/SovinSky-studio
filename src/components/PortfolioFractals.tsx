@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { canvasDpr, getMotionTier } from "../lib/motionTier";
+import { onPageActivity } from "../lib/pageActivity";
 import styles from "./PortfolioFractals.module.css";
 
 type Speck = {
@@ -83,6 +84,7 @@ export function PortfolioFractals() {
     let raf = 0;
     let running = true;
     let visible = true;
+    let pageOn = true;
     let lastTs = performance.now();
     let w = 0;
     let h = 0;
@@ -109,7 +111,7 @@ export function PortfolioFractals() {
     const tick = (ts: number) => {
       if (!running) return;
       raf = 0;
-      if (!visible) return;
+      if (!visible || !pageOn) return;
       const dt = Math.min(0.05, (ts - lastTs) / 1000);
       lastTs = ts;
       const t = ts * 0.001;
@@ -148,8 +150,15 @@ export function PortfolioFractals() {
       raf = requestAnimationFrame(tick);
     };
 
+    const stopRaf = () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
     const kick = () => {
-      if (!running || raf || !visible) return;
+      if (!running || raf || !visible || !pageOn) return;
       lastTs = performance.now();
       raf = requestAnimationFrame(tick);
     };
@@ -162,21 +171,25 @@ export function PortfolioFractals() {
     const io = new IntersectionObserver(
       ([entry]) => {
         visible = entry?.isIntersecting ?? false;
-        if (visible) kick();
-        else if (raf) {
-          cancelAnimationFrame(raf);
-          raf = 0;
-        }
+        if (visible && pageOn) kick();
+        else stopRaf();
       },
       { rootMargin: "40px" },
     );
     io.observe(host);
 
+    const offActivity = onPageActivity((active) => {
+      pageOn = active;
+      if (active) kick();
+      else stopRaf();
+    });
+
     return () => {
       running = false;
-      cancelAnimationFrame(raf);
+      stopRaf();
       ro.disconnect();
       io.disconnect();
+      offActivity();
     };
   }, []);
 
