@@ -56,7 +56,7 @@
   width: 100%;
 }
 
-.visual > :not([data-project-warp]):not(.appStage) {
+.visual > :not([data-project-warp]):not([data-app-stage]) {
   opacity: 0;
 }
 
@@ -65,7 +65,19 @@
   inset: 0;
   overflow: hidden;
   border-radius: 18px;
-  background: #2a1210;
+  background: #1a0c0a;
+}
+
+.appGlow {
+  position: absolute;
+  inset: -18%;
+  width: 136%;
+  height: 136%;
+  object-fit: cover;
+  filter: blur(36px) saturate(1.25);
+  opacity: 0.55;
+  pointer-events: none;
+  transform: scale(1.05);
 }
 
 .appCover {
@@ -78,14 +90,61 @@
   transition: transform 0.7s var(--ease-reveal);
 }
 
-.card:hover .appCover {
-  transform: scale(1.04);
+.phones {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(6px, 1.2vw, 14px);
+  padding: 4% 3% 3%;
 }
 
-.visual:has(.appStage) .index {
+.phone {
+  width: min(31%, 200px);
+  height: 94%;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 18px 28px rgb(0 0 0 / 0.55));
+  transition: transform 0.7s var(--ease-reveal);
+}
+
+.phone:nth-child(1),
+.phone:nth-child(3) {
+  width: min(27%, 172px);
+  height: 84%;
+  opacity: 0.96;
+}
+
+.phone:nth-child(2) {
+  z-index: 1;
+}
+
+.card:hover .appCover,
+.card:hover .phone:nth-child(2) {
+  transform: translateY(-3%) scale(1.02);
+}
+
+.card:hover .phone:nth-child(1) {
+  transform: translateY(-1%) rotate(-1.5deg);
+}
+
+.card:hover .phone:nth-child(3) {
+  transform: translateY(-1%) rotate(1.5deg);
+}
+
+.visual:has([data-app-stage]) .index {
   opacity: 1;
   z-index: 2;
   text-shadow: 0 1px 8px rgb(0 0 0 / 0.55);
+}
+
+@media (max-width: 809.98px) {
+  .phones {
+    gap: 4px;
+    padding: 5% 2% 3%;
+  }
 }
 
 .sun {
