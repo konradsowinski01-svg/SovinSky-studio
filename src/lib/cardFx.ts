@@ -13,7 +13,7 @@ type FxCue = {
 const FX: FxCue[] = [
   { at: 4.84, run: () => sideEdgeFlash(1200) },
   { at: 7, run: () => sideEdgeFlash(1200) },
-  { at: 9.77, run: () => sideEdgeFlash(1200) },
+  { at: 9.67, run: () => sideEdgeFlash(1200) },
 ];
 
 /** Prosty biały flash z lewej/prawej — tani CSS gradient. */
