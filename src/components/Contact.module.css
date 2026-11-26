@@ -60,7 +60,8 @@
 }
 
 .mailWrap:hover,
-.mailWrap:focus-visible {
+.mailWrap:focus-visible,
+.mailWrap[data-lined="true"] {
   background-size: 100% 3px;
   outline: none;
 }

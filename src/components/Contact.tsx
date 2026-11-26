@@ -1,21 +1,57 @@
+import { useEffect, useRef } from "react";
 import { site } from "../data/site";
 import { RollLink } from "./RollLink";
 import { TextSplit } from "./TextSplit";
 import styles from "./Contact.module.css";
 
+const LINE_DELAY_MS = 2000;
+
 export function Contact() {
   const mailto = `mailto:${site.email}`;
   const tel = `tel:${site.phone.replace(/\s+/g, "")}`;
   const wa = `https://wa.me/${site.whatsapp}`;
+  const sectionRef = useRef<HTMLElement>(null);
+  const mailRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const mail = mailRef.current;
+    if (!section || !mail) return;
+
+    let timer = 0;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          if (timer || mail.dataset.lined === "true") return;
+          timer = window.setTimeout(() => {
+            timer = 0;
+            mail.dataset.lined = "true";
+          }, LINE_DELAY_MS);
+          return;
+        }
+        if (timer) {
+          window.clearTimeout(timer);
+          timer = 0;
+        }
+      },
+      { threshold: 0.45 },
+    );
+
+    io.observe(section);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      io.disconnect();
+    };
+  }, []);
 
   return (
-    <section id="contact" className={styles.contact}>
+    <section id="contact" ref={sectionRef} className={styles.contact}>
       <div className={styles.grain} aria-hidden="true" />
       <h2 className="sr-only">Kontakt</h2>
       <p className={styles.label} data-fade="">
         Kontakt
       </p>
-      <a className={styles.mailWrap} href={mailto}>
+      <a ref={mailRef} className={styles.mailWrap} href={mailto}>
         <TextSplit
           as="span"
           text={site.email}
