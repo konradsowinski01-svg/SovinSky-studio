@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { About } from "./components/About";
 import { AboutPage } from "./components/AboutPage";
-import { AmbientFractals } from "./components/AmbientFractals";
 import { CardIntro } from "./components/CardIntro";
 import { Contact } from "./components/Contact";
 import { DnaField } from "./components/DnaField";
@@ -97,7 +96,6 @@ export default function App() {
         className={`${styles.app} ${ready ? styles.revealed : booted ? styles.warming : styles.hidden}`}
         aria-hidden={!ready}
       >
-        <AmbientFractals />
         <Topbar route={route} />
         {route === "portfolio" ? (
           <Portfolio />
