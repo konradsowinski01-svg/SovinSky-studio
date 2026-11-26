@@ -152,14 +152,18 @@ const palettes = [
   ["#e94f18", "#64180a", "#090706"],
 ];
 
-export function makeTexture(title: string, index: number) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1280;
-  canvas.height = 720;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return canvas;
+const FRAME = { x: 150, y: 130, w: 980, h: 465, r: 24, chromeH: 50 } as const;
 
-  const [hot, deep, dark] = palettes[index % palettes.length];
+function paintCardShell(
+  ctx: CanvasRenderingContext2D,
+  index: number,
+  opts?: { hot?: string; deep?: string; dark?: string },
+) {
+  const [hot, deep, dark] = [
+    opts?.hot ?? palettes[index % palettes.length]![0],
+    opts?.deep ?? palettes[index % palettes.length]![1],
+    opts?.dark ?? palettes[index % palettes.length]![2],
+  ];
   const bg = ctx.createLinearGradient(0, 0, 1280, 720);
   bg.addColorStop(0, hot);
   bg.addColorStop(0.5, deep);
@@ -177,42 +181,111 @@ export function makeTexture(title: string, index: number) {
   ctx.arc(650, 360, 430, 0, Math.PI * 2);
   ctx.fill();
 
+  const { x, y, w, h, r, chromeH } = FRAME;
   ctx.fillStyle = "rgba(12, 8, 7, .84)";
   ctx.strokeStyle = "rgba(255, 255, 255, .16)";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.roundRect(150, 130, 980, 465, 24);
+  ctx.roundRect(x, y, w, h, r);
   ctx.fill();
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(150, 180);
-  ctx.lineTo(1130, 180);
+  ctx.moveTo(x, y + chromeH);
+  ctx.lineTo(x + w, y + chromeH);
   ctx.stroke();
   ["#ff7254", "#ffb24e", "#d6d6d6"].forEach((color, i) => {
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(180 + i * 27, 156, 8, 0, Math.PI * 2);
+    ctx.arc(x + 30 + i * 27, y + 26, 8, 0, Math.PI * 2);
     ctx.fill();
   });
-
-  ctx.fillStyle = "#fff";
-  ctx.font = "700 54px Georgia, serif";
-  ctx.fillText(title, 205, 285);
-  ctx.fillStyle = "rgba(255,255,255,.24)";
-  [0, 1, 2].forEach((line) => {
-    ctx.beginPath();
-    ctx.roundRect(205, 330 + line * 38, line === 1 ? 680 : 560, 13, 8);
-    ctx.fill();
-  });
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.roundRect(205, 475, 300, 58, 29);
-  ctx.fill();
 
   ctx.fillStyle = "rgba(255,255,255,.7)";
   ctx.font = "500 20px monospace";
   ctx.fillText(String(index + 1).padStart(2, "0"), 35, 45);
+}
+
+function drawCoverInFrame(
+  ctx: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  imageWidth: number,
+  imageHeight: number,
+) {
+  const { x, y, w, h, r, chromeH } = FRAME;
+  const screenX = x;
+  const screenY = y + chromeH;
+  const screenW = w;
+  const screenH = h - chromeH;
+
+  ctx.save();
+  ctx.beginPath();
+  // Clip to the window body under the chrome (square top, rounded bottom).
+  ctx.moveTo(screenX, screenY);
+  ctx.lineTo(screenX + screenW, screenY);
+  ctx.lineTo(screenX + screenW, screenY + screenH - r);
+  ctx.quadraticCurveTo(screenX + screenW, screenY + screenH, screenX + screenW - r, screenY + screenH);
+  ctx.lineTo(screenX + r, screenY + screenH);
+  ctx.quadraticCurveTo(screenX, screenY + screenH, screenX, screenY + screenH - r);
+  ctx.closePath();
+  ctx.clip();
+
+  const scale = Math.max(screenW / imageWidth, screenH / imageHeight);
+  const dw = imageWidth * scale;
+  const dh = imageHeight * scale;
+  const dx = screenX + (screenW - dw) / 2;
+  const dy = screenY + (screenH - dh) / 2;
+  ctx.drawImage(image, dx, dy, dw, dh);
+  ctx.restore();
+}
+
+export function makeTexture(title: string, index: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1280;
+  canvas.height = 720;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+
+  paintCardShell(ctx, index);
+
+  const { x, y, chromeH } = FRAME;
+  ctx.fillStyle = "#fff";
+  ctx.font = "700 54px Georgia, serif";
+  ctx.fillText(title, x + 55, y + chromeH + 105);
+  ctx.fillStyle = "rgba(255,255,255,.24)";
+  [0, 1, 2].forEach((line) => {
+    ctx.beginPath();
+    ctx.roundRect(x + 55, y + chromeH + 150 + line * 38, line === 1 ? 680 : 560, 13, 8);
+    ctx.fill();
+  });
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.roundRect(x + 55, y + chromeH + 295, 300, 58, 29);
+  ctx.fill();
+
+  return canvas;
+}
+
+/** Same chrome window as placeholders — real cover sits inside the frame. */
+export function makeCoverTexture(
+  image: HTMLImageElement | HTMLCanvasElement,
+  index: number,
+  tone: "warm" | "dark" | "bright" = "warm",
+) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1280;
+  canvas.height = 720;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas;
+
+  const tonePalettes: Record<typeof tone, [string, string, string]> = {
+    warm: palettes[0]!,
+    dark: ["#5b21b6", "#1e1b4b", "#050508"],
+    bright: ["#fb923c", "#9a3412", "#111111"],
+  };
+  const [hot, deep, dark] = tonePalettes[tone];
+  paintCardShell(ctx, index, { hot, deep, dark });
+  drawCoverInFrame(ctx, image, image.width, image.height);
   return canvas;
 }
 
@@ -231,7 +304,8 @@ function compile(gl: WebGLRenderingContext, type: number, source: string) {
 type Props = {
   title: string;
   index: number;
-  /** Real project cover — used as the warp/sand texture instead of the procedural poster. */
+  tone?: "warm" | "dark" | "bright";
+  /** Real project cover — framed in the same chrome window as placeholder tiles. */
   imageSrc?: string;
 };
 
@@ -245,7 +319,7 @@ function loadCover(src: string): Promise<HTMLImageElement> {
   });
 }
 
-export function ProjectWarp({ title, index, imageSrc }: Props) {
+export function ProjectWarp({ title, index, imageSrc, tone = "warm" }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -253,13 +327,15 @@ export function ProjectWarp({ title, index, imageSrc }: Props) {
     if (!canvas) return;
     const tier = getMotionTier();
     const poster = makeTexture(title, index);
-    let cover: HTMLImageElement | HTMLCanvasElement = poster;
+    let cover: HTMLCanvasElement = poster;
     let cancelled = false;
+
+    const framedFrom = (img: HTMLImageElement) => makeCoverTexture(img, index, tone);
 
     const uploadTexture = (
       gl: WebGLRenderingContext,
       texture: WebGLTexture,
-      source: HTMLImageElement | HTMLCanvasElement,
+      source: HTMLCanvasElement,
     ) => {
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -289,7 +365,7 @@ export function ProjectWarp({ title, index, imageSrc }: Props) {
         loadCover(imageSrc)
           .then((img) => {
             if (cancelled) return;
-            cover = img;
+            cover = framedFrom(img);
             paint();
           })
           .catch(() => {});
@@ -341,8 +417,8 @@ export function ProjectWarp({ title, index, imageSrc }: Props) {
       loadCover(imageSrc)
         .then((img) => {
           if (cancelled) return;
-          cover = img;
-          uploadTexture(gl, texture, img);
+          cover = framedFrom(img);
+          uploadTexture(gl, texture, cover);
         })
         .catch(() => {});
     }
@@ -461,7 +537,7 @@ export function ProjectWarp({ title, index, imageSrc }: Props) {
       gl.deleteShader(vertex);
       gl.deleteShader(fragment);
     };
-  }, [index, title, imageSrc]);
+  }, [index, title, imageSrc, tone]);
 
   return (
     <canvas
