@@ -73,12 +73,13 @@ export const projects: Project[] = [
     cover: "projects/rrclub/cover-v4.jpg",
   },
   {
-    slug: "app-panel",
-    title: "App Panel",
-    kind: "Aplikacja webowa",
+    slug: "rkm-trade",
+    title: "R.K.M. TRADE",
+    kind: "Strona WWW · handel ciągnikami",
     year: "2025",
     tone: "bright",
     gradient: "linear-gradient(135deg, #fb923c 0%, #ea580c 35%, #111111 100%)",
+    cover: "projects/rkm-trade/cover.jpg",
   },
   {
     slug: "kampania-sms",
