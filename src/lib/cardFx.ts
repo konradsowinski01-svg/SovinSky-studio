@@ -10,9 +10,17 @@ type FxCue = {
   run: () => void;
 };
 
-const FX: FxCue[] = [{ at: 4.9, run: whiteVignetteFlash }];
+const FX: FxCue[] = [
+  { at: 4.9, run: () => sideEdgeFlash(700) },
+  { at: 7, run: () => sideEdgeFlash(800) },
+];
 
-function whiteVignetteFlash() {
+/** Biały flash tylko z lewej/prawej krawędzi. */
+function sideEdgeFlash(durationMs: number) {
+  const fadeIn = Math.min(160, durationMs * 0.2);
+  const fadeOut = Math.min(480, durationMs * 0.55);
+  const holdUntil = Math.max(fadeIn + 40, durationMs - fadeOut);
+
   const el = document.createElement("div");
   el.setAttribute("aria-hidden", "true");
   Object.assign(el.style, {
@@ -23,7 +31,7 @@ function whiteVignetteFlash() {
     opacity: "0",
     background:
       "linear-gradient(90deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.28) 12%, transparent 28%, transparent 72%, rgba(255,255,255,0.28) 88%, rgba(255,255,255,0.88) 100%)",
-    transition: "opacity 140ms ease-out",
+    transition: `opacity ${fadeIn}ms ease-out`,
   } as CSSStyleDeclaration);
 
   document.body.appendChild(el);
@@ -31,15 +39,14 @@ function whiteVignetteFlash() {
     el.style.opacity = "1";
   });
 
-  // 700 ms łącznie: peak, potem zgaszenie.
   window.setTimeout(() => {
-    el.style.transition = "opacity 420ms ease-in";
+    el.style.transition = `opacity ${fadeOut}ms ease-in`;
     el.style.opacity = "0";
-  }, 260);
+  }, holdUntil);
 
   window.setTimeout(() => {
     el.remove();
-  }, 720);
+  }, durationMs + 40);
 }
 
 export function runCardFx(audio: HTMLAudioElement) {
