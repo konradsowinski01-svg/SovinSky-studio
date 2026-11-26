@@ -76,7 +76,7 @@ export const projects: Project[] = [
     slug: "rkm-trade",
     title: "R.K.M. TRADE",
     kind: "Strona WWW · handel ciągnikami",
-    year: "2025",
+    year: "2026",
     tone: "bright",
     gradient: "linear-gradient(135deg, #fb923c 0%, #ea580c 35%, #111111 100%)",
     cover: "projects/rkm-trade/cover.jpg",

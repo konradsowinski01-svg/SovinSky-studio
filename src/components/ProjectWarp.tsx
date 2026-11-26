@@ -229,7 +229,8 @@ function drawCoverInFrame(
   ctx.closePath();
   ctx.clip();
 
-  const scale = Math.max(screenW / imageWidth, screenH / imageHeight);
+  // Contain — keep full artwork visible (no heavy top/bottom crop).
+  const scale = Math.min(screenW / imageWidth, screenH / imageHeight);
   const dw = imageWidth * scale;
   const dh = imageHeight * scale;
   const dx = screenX + (screenW - dw) / 2;
