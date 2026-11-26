@@ -40,8 +40,9 @@ export default function App() {
     dismissIntro();
   }, [dismissIntro, revealHome]);
   const route = useRoute();
+  // Lenis + DOM/WebGL pod czarnym ekranem; animacje wejścia dopiero przy reveal.
   useLenis(booted);
-  usePageMotion(booted && route === "home");
+  usePageMotion(ready && route === "home");
 
   // Po bootcie dograj layout — home ma być „na gotowo” zanim zniknie czarny ekran.
   useLayoutEffect(() => {
