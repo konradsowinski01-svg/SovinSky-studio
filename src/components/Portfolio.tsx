@@ -22,9 +22,8 @@ export function Portfolio() {
         <h1 className="sr-only">Portfolio</h1>
         <div className={styles.intro}>
           <p>
-            Wybrane realizacje: strony firmowe, landingi pod kampanie i lekkie aplikacje webowe.
-            Każdy projekt zaprojektowałem i zbudowałem od zera, z myślą o telefonie i szybkim
-            kontakcie.
+            Wybrane realizacje: aplikacje mobilne, strony firmowe i landingi. Każdy projekt
+            zaprojektowałem i zbudowałem od zera — od szkicu po wdrożenie.
           </p>
           <a href={mailto} className={styles.cta}>
             Napisz w sprawie projektu <span aria-hidden="true">→</span>

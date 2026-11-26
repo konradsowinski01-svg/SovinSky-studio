@@ -46,16 +46,19 @@ export type Project = {
   year: string;
   gradient: string;
   tone: "dark" | "warm" | "bright";
+  /** Zewnętrzny link (np. App Store). Bez tego — #contact. */
+  href?: string;
 };
 
 export const projects: Project[] = [
   {
-    slug: "landing-studio",
-    title: "Landing Studio",
-    kind: "Landing page",
-    year: "2026",
+    slug: "arngcor",
+    title: "ARNGCOR",
+    kind: "Aplikacja iOS · App Store",
+    year: "2025",
     tone: "warm",
     gradient: "linear-gradient(145deg, #ff5a1f 0%, #9a3412 42%, #1a0a05 100%)",
+    href: "https://apps.apple.com/app/arngcor/id6772146674",
   },
   {
     slug: "firma-online",

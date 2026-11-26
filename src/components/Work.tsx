@@ -24,8 +24,15 @@ export function Work() {
           >
             <a
               className={styles.card}
-              href="#contact"
-              aria-label={`${project.title}: napisz w sprawie podobnego projektu`}
+              href={project.href ?? "#contact"}
+              {...(project.href
+                ? { target: "_blank", rel: "noopener noreferrer" }
+                : {})}
+              aria-label={
+                project.href
+                  ? `${project.title}: otwórz w App Store`
+                  : `${project.title}: napisz w sprawie podobnego projektu`
+              }
             >
               <div className={styles.bend} data-proj-bend="">
                 <div className={`${styles.visual} ${styles[project.tone]}`} data-proj-visual="">
