@@ -17,6 +17,13 @@
   animation: grain 0.6s steps(3) infinite;
 }
 
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .grain {
+    animation: none;
+    opacity: 0.14;
+  }
+}
+
 @keyframes grain {
   0% {
     transform: translate(0, 0);

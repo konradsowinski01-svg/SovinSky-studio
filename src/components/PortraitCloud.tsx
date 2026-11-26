@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { canvasDpr, getMotionTier } from "../lib/motionTier";
 import styles from "./PortraitCloud.module.css";
 
 const SRC = `${import.meta.env.BASE_URL}dna-helix.obj`;
@@ -6,7 +7,9 @@ const IDLE_SPEED = 0.24;
 const PITCH = 0.12;
 const DRIFT = 0.01;
 const SAMPLES_PER_TRI = 9;
-const MAX_DOTS = 18000;
+const MAX_DOTS_HIGH = 18000;
+const MAX_DOTS_MEDIUM = 5500;
+const MAX_DOTS_LOW = 2800;
 
 type Vec3 = [number, number, number];
 type Dot = {
@@ -75,7 +78,7 @@ function mix3(a: Vec3, b: Vec3, c: Vec3, u: number, v: number): Vec3 {
 }
 
 /** Sample Embossify CC0 DNA helix mesh into a sand point cloud. */
-function buildDotsFromObj(text: string): Dot[] {
+function buildDotsFromObj(text: string, maxDots: number): Dot[] {
   const { verts, faces } = parseObj(text);
   if (!verts.length || !faces.length) return [];
 
@@ -152,9 +155,9 @@ function buildDotsFromObj(text: string): Dot[] {
     }
   }
 
-  if (dots.length <= MAX_DOTS) return dots;
-  const stride = Math.ceil(dots.length / MAX_DOTS);
-  return dots.filter((_, i) => i % stride === 0).slice(0, MAX_DOTS);
+  if (dots.length <= maxDots) return dots;
+  const stride = Math.ceil(dots.length / maxDots);
+  return dots.filter((_, i) => i % stride === 0).slice(0, maxDots);
 }
 
 function project(
@@ -189,7 +192,13 @@ export function PortraitCloud() {
     let running = true;
     let angle = 0.35;
     let lastTs = performance.now();
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let lastDrawTs = 0;
+    const tier = getMotionTier();
+    const reduceMotion =
+      tier === "low" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const maxDots =
+      tier === "low" ? MAX_DOTS_LOW : tier === "medium" ? MAX_DOTS_MEDIUM : MAX_DOTS_HIGH;
+    const frameBudgetMs = tier === "low" ? 48 : tier === "medium" ? 33 : 0;
 
     // Cursor / finger magnet — only on the DNA region.
     let pointerX = 0;
@@ -199,25 +208,19 @@ export function PortraitCloud() {
     let magnet = 0;
     const coarse = window.matchMedia("(pointer: coarse)").matches;
     const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const magnetsEnabled = tier === "high" && !reduceMotion;
     type Spark = { x: number; y: number; vx: number; vy: number; life: number; seed: number; r: number };
     const sparks: Spark[] = [];
-    const SPARK_CAP = coarse ? 110 : 70;
+    const SPARK_CAP = magnetsEnabled ? (coarse ? 70 : 70) : 0;
 
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-
-    const driftOf = (d: Dot, t: number) => {
-      const amp = DRIFT;
-      return {
-        x: d.x + (fbm(t * 0.4 + d.seed) - 0.5) * 2 * amp,
-        y: d.y + (fbm(t * 0.36 + d.seed + 17.2) - 0.5) * 2 * amp,
-        z: d.z + (fbm(t * 0.33 + d.seed + 41.7) - 0.5) * 2 * amp,
-      };
+    // Cache expensive layout / theme reads — avoid layout thrash every rAF.
+    let layoutCache = {
+      aboutW: 0,
+      aboutH: 0,
+      fadeAnchor: 0,
+      contactTop: 0,
+      light: false,
+      at: 0,
     };
 
     const isLightBg = () => {
@@ -229,6 +232,48 @@ export function PortraitCloud() {
       const b = parseInt(hex.slice(4, 6), 16);
       if ([r, g, b].some((n) => Number.isNaN(n))) return false;
       return 0.299 * r + 0.587 * g + 0.114 * b > 140;
+    };
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = canvasDpr(tier);
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      layoutCache.at = 0;
+    };
+
+    const refreshLayout = (rect: DOMRect, w: number, h: number, force = false) => {
+      const now = performance.now();
+      if (!force && now - layoutCache.at < 120) return layoutCache;
+      const about = document.getElementById("about");
+      const aboutRect = about?.getBoundingClientRect();
+      const lastProj = document.querySelector<HTMLElement>("#work [data-proj]:last-of-type");
+      const fadeAnchor = lastProj
+        ? lastProj.getBoundingClientRect().bottom - rect.top
+        : (document.getElementById("work")?.getBoundingClientRect().bottom ?? 0) - rect.top;
+      const contact = document.getElementById("contact");
+      const contactTop = contact
+        ? contact.getBoundingClientRect().top - rect.top
+        : h * 0.85;
+      layoutCache = {
+        aboutW: aboutRect?.width || w,
+        aboutH: aboutRect?.height || Math.min(h, window.innerHeight),
+        fadeAnchor,
+        contactTop,
+        light: isLightBg(),
+        at: now,
+      };
+      return layoutCache;
+    };
+
+    const driftOf = (d: Dot, t: number) => {
+      const amp = DRIFT;
+      return {
+        x: d.x + (fbm(t * 0.4 + d.seed) - 0.5) * 2 * amp,
+        y: d.y + (fbm(t * 0.36 + d.seed + 17.2) - 0.5) * 2 * amp,
+        z: d.z + (fbm(t * 0.33 + d.seed + 41.7) - 0.5) * 2 * amp,
+      };
     };
 
     const draw = (tSec = 0) => {
@@ -245,29 +290,22 @@ export function PortraitCloud() {
 
       // Size from About; pin helix to viewport mid on every breakpoint so
       // DNA holds still while Work / About / Contact scroll past it.
-      const about = document.getElementById("about");
-      const aboutRect = about?.getBoundingClientRect();
+      const layout = refreshLayout(rect, w, h);
       const mobile = w < 810;
-      const refW = aboutRect?.width || w;
-      const refH = aboutRect?.height || Math.min(h, window.innerHeight);
+      const refW = layout.aboutW;
+      const refH = layout.aboutH;
       const scale = Math.min(refW, Math.min(refH, window.innerHeight)) * (mobile ? 1.85 : 2.55);
       const ox = w * (mobile ? 0.62 : 0.74);
       const oy = window.innerHeight * 0.5 - rect.top;
-      const light = isLightBg();
+      const light = layout.light;
 
       // Soft reveal starting around the last Work tile ("Kampania SMS"),
       // so DNA gently appears as the project list ends.
-      const lastProj = document.querySelector<HTMLElement>("#work [data-proj]:last-of-type");
-      const fadeAnchor = lastProj
-        ? lastProj.getBoundingClientRect().bottom - rect.top
-        : (document.getElementById("work")?.getBoundingClientRect().bottom ?? 0) - rect.top;
+      const fadeAnchor = layout.fadeAnchor;
       const fadeInStart = fadeAnchor - Math.min(220, h * 0.1);
       const fadeInEnd = fadeInStart + Math.min(h * 0.42, window.innerHeight * 0.85);
 
-      const contact = document.getElementById("contact");
-      const contactTop = contact
-        ? contact.getBoundingClientRect().top - rect.top
-        : h * 0.85;
+      const contactTop = layout.contactTop;
       // Soft bottom trim only — helix anchor (oy) unchanged, just shorter below.
       const bottomTrim = 270;
       const fadeOutStart = contactTop + Math.min(h * 0.08, 100) - bottomTrim;
@@ -293,7 +331,7 @@ export function PortraitCloud() {
       const magnetR = Math.min(w, h) * (coarse ? 0.4 : 0.28);
       const dnaHitR = Math.min(refW, refH) * (coarse ? 0.85 : 0.62);
       const wantMagnet =
-        !reduceMotion &&
+        magnetsEnabled &&
         pointerOn &&
         Math.hypot(pointerX - ox, pointerY - oy) < dnaHitR &&
         pointerY > fadeInStart - (coarse ? 40 : 0) &&
@@ -395,7 +433,12 @@ export function PortraitCloud() {
       const dt = Math.min(0.05, (ts - lastTs) / 1000);
       lastTs = ts;
       if (!reduceMotion) angle -= IDLE_SPEED * dt;
-      const wantMagnet = draw(ts * 0.001);
+      const due = frameBudgetMs <= 0 || ts - lastDrawTs >= frameBudgetMs;
+      let wantMagnet = false;
+      if (due) {
+        lastDrawTs = ts;
+        wantMagnet = draw(ts * 0.001);
+      }
       // Snap on under a finger; linger a bit after lift so the effect reads on mobile.
       const magnetLerp = wantMagnet ? (coarse ? 10 : 7) : coarse ? 2.2 : 5;
       magnet += ((wantMagnet ? 1 : 0) - magnet) * Math.min(1, dt * magnetLerp);
@@ -463,7 +506,7 @@ export function PortraitCloud() {
       })
       .then((text) => {
         if (cancelled) return;
-        dots = buildDotsFromObj(text);
+        dots = buildDotsFromObj(text, maxDots);
         resize();
         kick();
       })

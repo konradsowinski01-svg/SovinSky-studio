@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { canvasDpr, getMotionTier } from "../lib/motionTier";
 import styles from "./PolaroidPortrait.module.css";
 
 const SRC = `${import.meta.env.BASE_URL}about-portrait.jpg`;
@@ -371,7 +372,10 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
     const octx = overlay.getContext("2d");
     if (!ctx || !octx) return;
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const tier = getMotionTier();
+    const reduceMotion =
+      tier === "low" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const allowIdleOrbit = tier === "high";
     let cancelled = false;
     let raf = 0;
     let started = false;
@@ -393,7 +397,7 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
     const sizePolaroid = () => {
       cssW = wrap.clientWidth || 340;
       cssH = Math.round(cssW * 1.22);
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = canvasDpr(tier);
       canvas.width = Math.max(1, Math.floor(cssW * dpr));
       canvas.height = Math.max(1, Math.floor(cssH * dpr));
       canvas.style.width = `${cssW}px`;
@@ -407,7 +411,7 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       if (!force && nextW === viewW && nextH === viewH) return;
       viewW = nextW;
       viewH = nextH;
-      const odpr = Math.min(window.devicePixelRatio || 1, 2);
+      const odpr = canvasDpr(tier);
       overlay.width = Math.max(1, Math.floor(viewW * odpr));
       overlay.height = Math.max(1, Math.floor(viewH * odpr));
       overlay.style.width = `${viewW}px`;
@@ -454,6 +458,9 @@ export function PolaroidPortrait({ alt = "Portret", className = "" }: Props) {
       idle = true;
       idleStart = performance.now();
       paintPolaroid();
+      overlay.classList.remove(styles.overlayLive);
+      octx.clearRect(0, 0, viewW, viewH);
+      if (!allowIdleOrbit) return;
       orbiters = buildOrbitShards(ORBIT_COUNT);
       overlay.classList.add(styles.overlayLive);
       raf = requestAnimationFrame(idleTick);

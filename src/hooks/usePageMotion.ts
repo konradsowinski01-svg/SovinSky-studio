@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { onVelocity } from "../lib/lenisStore";
+import { getMotionTier } from "../lib/motionTier";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -13,6 +14,8 @@ export function usePageMotion(ready: boolean) {
     if (!ready) return;
     const root = document.documentElement;
     const cleanups: Array<() => void> = [];
+    const tier = getMotionTier();
+    const lightMotion = tier !== "high";
 
     const ctx = gsap.context(() => {
       const ease = "power3.out";
@@ -83,7 +86,7 @@ export function usePageMotion(ready: boolean) {
       }
 
       // --- Pointer: whole mark leans lightly (one transform, not per-layer)
-      if (wordmark) {
+      if (wordmark && !lightMotion) {
         const moveX = gsap.quickTo(wordmark, "x", { duration: 1.4, ease: "power3.out" });
         const moveY = gsap.quickTo(wordmark, "y", { duration: 1.4, ease: "power3.out" });
         const onMove = (e: PointerEvent) => {
@@ -103,7 +106,31 @@ export function usePageMotion(ready: boolean) {
         const blur = filter?.querySelector("[data-liquid-blur]");
         const matrix = filter?.querySelector("[data-liquid-matrix]");
         const characters = heading.querySelectorAll<HTMLElement>("[data-liquid-char]");
-        if (!blur || !matrix || !characters.length) return;
+        if (!characters.length) return;
+
+        // Mobile: skip perpetual SVG goo filter updates — plain settle + color.
+        if (lightMotion || !blur || !matrix) {
+          heading.style.filter = "none";
+          gsap.fromTo(
+            characters,
+            { yPercent: 40, opacity: 0 },
+            {
+              yPercent: 0,
+              opacity: 1,
+              duration: 1,
+              ease: "expo.out",
+              stagger: 0.02,
+              scrollTrigger: { trigger: heading, start: "top 88%", once: true },
+            },
+          );
+          gsap.to(heading, {
+            color: "var(--ink)",
+            duration: 1.2,
+            ease: "power2.out",
+            scrollTrigger: { trigger: heading, start: "top 85%", once: true },
+          });
+          return;
+        }
 
         const state = { blur: 18, base: 18 };
         const apply = () => {
@@ -181,45 +208,59 @@ export function usePageMotion(ready: boolean) {
         const cap = card.querySelector<HTMLElement>("[data-proj-cap]");
         const visual = card.querySelector<HTMLElement>("[data-proj-visual]");
         if (cap && visual) {
-          const away = () => -(card.getBoundingClientRect().left + cap.offsetWidth + 40);
-          gsap.fromTo(
-            cap,
-            { x: away, opacity: 0 },
-            {
-              x: 0,
-              opacity: 1,
-              ease: "power2.out",
-              immediateRender: true,
-              scrollTrigger: {
-                trigger: visual,
-                start: "top 72%",
-                end: "center 50%",
-                scrub: 0.8,
-                invalidateOnRefresh: true,
+          if (lightMotion) {
+            gsap.fromTo(
+              cap,
+              { opacity: 0, y: 24 },
+              {
+                opacity: 1,
+                y: 0,
+                duration: 0.7,
+                ease: "power2.out",
+                scrollTrigger: { trigger: visual, start: "top 78%", once: true },
               },
-            },
-          );
-          gsap.fromTo(
-            cap,
-            { x: 0, opacity: 1 },
-            {
-              x: away,
-              opacity: 0,
-              ease: "power2.in",
-              immediateRender: false,
-              scrollTrigger: {
-                trigger: visual,
-                start: "bottom 52%",
-                end: "bottom 24%",
-                scrub: 0.8,
-                invalidateOnRefresh: true,
+            );
+          } else {
+            const away = () => -(card.getBoundingClientRect().left + cap.offsetWidth + 40);
+            gsap.fromTo(
+              cap,
+              { x: away, opacity: 0 },
+              {
+                x: 0,
+                opacity: 1,
+                ease: "power2.out",
+                immediateRender: true,
+                scrollTrigger: {
+                  trigger: visual,
+                  start: "top 72%",
+                  end: "center 50%",
+                  scrub: 0.8,
+                  invalidateOnRefresh: true,
+                },
               },
-            },
-          );
+            );
+            gsap.fromTo(
+              cap,
+              { x: 0, opacity: 1 },
+              {
+                x: away,
+                opacity: 0,
+                ease: "power2.in",
+                immediateRender: false,
+                scrollTrigger: {
+                  trigger: visual,
+                  start: "bottom 52%",
+                  end: "bottom 24%",
+                  scrub: 0.8,
+                  invalidateOnRefresh: true,
+                },
+              },
+            );
+          }
         }
 
         const sun = card.querySelector<HTMLElement>("[data-proj-sun]");
-        if (sun) {
+        if (sun && !lightMotion) {
           gsap.fromTo(
             sun,
             { yPercent: 35, scale: 0.85 },
@@ -247,15 +288,25 @@ export function usePageMotion(ready: boolean) {
       gsap.utils.toArray<HTMLElement>("[data-fade]").forEach((el) => {
         gsap.fromTo(
           el,
-          { opacity: 0, y: 40, filter: "blur(10px)" },
-          {
-            opacity: 1,
-            y: 0,
-            filter: "blur(0px)",
-            duration: 1,
-            ease,
-            scrollTrigger: { trigger: el, start: "top 90%", once: true },
-          },
+          lightMotion
+            ? { opacity: 0, y: 28 }
+            : { opacity: 0, y: 40, filter: "blur(10px)" },
+          lightMotion
+            ? {
+                opacity: 1,
+                y: 0,
+                duration: 0.75,
+                ease,
+                scrollTrigger: { trigger: el, start: "top 90%", once: true },
+              }
+            : {
+                opacity: 1,
+                y: 0,
+                filter: "blur(0px)",
+                duration: 1,
+                ease,
+                scrollTrigger: { trigger: el, start: "top 90%", once: true },
+              },
         );
       });
 

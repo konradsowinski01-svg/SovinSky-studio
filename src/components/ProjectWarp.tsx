@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { onVelocity } from "../lib/lenisStore";
+import { canvasDpr, getMotionTier } from "../lib/motionTier";
 import styles from "./ProjectWarp.module.css";
 
 const VERTEX = `
@@ -237,10 +238,36 @@ export function ProjectWarp({ title, index }: Props) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const tier = getMotionTier();
+    const poster = makeTexture(title, index);
+
+    // Android / low-power: static poster only — no perpetual WebGL rAF × 4 cards.
+    if (tier !== "high") {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const paint = () => {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = canvasDpr(tier);
+        canvas.width = Math.max(1, Math.round(rect.width * dpr));
+        canvas.height = Math.max(1, Math.round(rect.height * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, rect.width, rect.height);
+        // Match WebGL bleed framing roughly: draw poster in the card core.
+        const padX = rect.width * 0.13;
+        const padY = rect.height * 0.18;
+        ctx.drawImage(poster, padX, padY, rect.width - padX * 2, rect.height - padY * 2);
+      };
+      paint();
+      const ro = new ResizeObserver(paint);
+      ro.observe(canvas);
+      return () => ro.disconnect();
+    }
+
     const gl = canvas.getContext("webgl", {
       alpha: true,
-      antialias: true,
+      antialias: tier === "high",
       premultipliedAlpha: true,
+      powerPreference: tier === "high" ? "high-performance" : "low-power",
     });
     if (!gl) return;
 
@@ -273,21 +300,14 @@ export function ProjectWarp({ title, index }: Props) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      makeTexture(title, index),
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, poster);
 
     const timeLocation = gl.getUniformLocation(program, "time");
     const aspectLocation = gl.getUniformLocation(program, "aspect");
     const rectTopLocation = gl.getUniformLocation(program, "rectTop");
     const rectHeightLocation = gl.getUniformLocation(program, "rectHeight");
     const velocityLocation = gl.getUniformLocation(program, "velocity");
-    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const dpr = canvasDpr(tier);
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       canvas.width = Math.max(1, Math.round(rect.width * dpr));
@@ -306,13 +326,25 @@ export function ProjectWarp({ title, index }: Props) {
 
     const start = performance.now();
     let frame = 0;
+    let active = false;
+    let lastRectAt = 0;
+    let cachedParentRect = { top: 0, height: 1, width: 1 };
+
     const render = (now: number) => {
+      if (!active) {
+        frame = 0;
+        return;
+      }
       frame = requestAnimationFrame(render);
       smoothVelocity += (targetVelocity - smoothVelocity) * 0.12;
       targetVelocity *= 0.92;
-      const bounds = canvas.getBoundingClientRect();
-      if (bounds.bottom < 0 || bounds.top > innerHeight) return;
-      const rect = (canvas.parentElement ?? canvas).getBoundingClientRect();
+      if (now - lastRectAt > 32) {
+        lastRectAt = now;
+        const parent = canvas.parentElement ?? canvas;
+        const r = parent.getBoundingClientRect();
+        cachedParentRect = { top: r.top, height: r.height, width: r.width };
+      }
+      const rect = cachedParentRect;
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1f(timeLocation, (now - start) / 1000);
@@ -322,11 +354,31 @@ export function ProjectWarp({ title, index }: Props) {
       gl.uniform1f(velocityLocation, smoothVelocity);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     };
-    frame = requestAnimationFrame(render);
+
+    const kick = () => {
+      if (active && !frame) frame = requestAnimationFrame(render);
+    };
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const next = entry?.isIntersecting ?? false;
+        if (next === active) return;
+        active = next;
+        if (active) kick();
+        else if (frame) {
+          cancelAnimationFrame(frame);
+          frame = 0;
+        }
+      },
+      { rootMargin: "12% 0px", threshold: 0.01 },
+    );
+    io.observe(canvas.parentElement ?? canvas);
 
     return () => {
+      active = false;
       cancelAnimationFrame(frame);
       observer.disconnect();
+      io.disconnect();
       unsubscribe();
       gl.deleteTexture(texture);
       gl.deleteBuffer(buffer);

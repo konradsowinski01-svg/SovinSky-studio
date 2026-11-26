@@ -80,6 +80,13 @@
   will-change: transform;
 }
 
+@media (pointer: coarse) {
+  .sun {
+    filter: none;
+    will-change: auto;
+  }
+}
+
 .frame {
   position: absolute;
   inset: 16% 14% 14%;
@@ -90,6 +97,13 @@
   overflow: hidden;
   box-shadow: 0 24px 60px rgb(0 0 0 / 0.45);
   transition: transform 0.7s var(--ease-reveal);
+}
+
+@media (pointer: coarse) {
+  .frame {
+    backdrop-filter: none;
+    background: rgb(10 10 10 / 0.88);
+  }
 }
 
 .card:hover .frame {

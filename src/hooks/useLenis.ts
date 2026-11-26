@@ -3,12 +3,30 @@ import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { emitVelocity, setLenis } from "../lib/lenisStore";
+import { getMotionTier } from "../lib/motionTier";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export function useLenis(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
+
+    const tier = getMotionTier();
+
+    // Touch / low-power: native scroll. Lenis + gsap.ticker lagSmoothing(0)
+    // fights Android compositor and tanks mid-range phones.
+    if (tier !== "high") {
+      setLenis(null);
+      const onScroll = () => {
+        ScrollTrigger.update();
+        emitVelocity(0);
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+      return () => {
+        window.removeEventListener("scroll", onScroll);
+      };
+    }
 
     const lenis = new Lenis({
       duration: 1.15,

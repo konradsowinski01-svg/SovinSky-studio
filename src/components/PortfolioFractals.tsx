@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
+import { canvasDpr, getMotionTier } from "../lib/motionTier";
 import styles from "./PortfolioFractals.module.css";
-
-const COUNT = 180;
 
 type Speck = {
   x: number;
@@ -39,12 +38,12 @@ function fbm(x: number, octaves = 3) {
   return sum / norm;
 }
 
-function makeSpecks(w: number, h: number): Speck[] {
+function makeSpecks(w: number, h: number, count: number): Speck[] {
   const list: Speck[] = [];
   // Cluster around the wordmark: left-anchored, mid-height of the mark.
   const cx = w * 0.42;
   const cy = h * 0.42;
-  for (let i = 0; i < COUNT; i++) {
+  for (let i = 0; i < count; i++) {
     const seed = i * 21.7 + 4.2;
     const ang = hash(seed) * Math.PI * 2;
     const rad = (0.08 + hash(seed + 1.3) * 0.62) * Math.min(w, h);
@@ -71,22 +70,26 @@ export function PortfolioFractals() {
     const ctx = canvas.getContext("2d");
     if (!host || !ctx) return;
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const tier = getMotionTier();
+    const reduceMotion =
+      tier === "low" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
       canvas.style.display = "none";
       return;
     }
 
+    const count = tier === "medium" ? 70 : 180;
     let specks: Speck[] = [];
     let raf = 0;
     let running = true;
+    let visible = true;
     let lastTs = performance.now();
     let w = 0;
     let h = 0;
 
     const resize = () => {
       const rect = host.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = canvasDpr(tier);
       w = Math.max(1, rect.width);
       h = Math.max(1, rect.height);
       canvas.width = Math.max(1, Math.floor(w * dpr));
@@ -94,7 +97,7 @@ export function PortfolioFractals() {
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      specks = makeSpecks(w, h);
+      specks = makeSpecks(w, h, count);
     };
 
     const wrap = (v: number, max: number) => {
@@ -105,6 +108,8 @@ export function PortfolioFractals() {
 
     const tick = (ts: number) => {
       if (!running) return;
+      raf = 0;
+      if (!visible) return;
       const dt = Math.min(0.05, (ts - lastTs) / 1000);
       lastTs = ts;
       const t = ts * 0.001;
@@ -143,17 +148,35 @@ export function PortfolioFractals() {
       raf = requestAnimationFrame(tick);
     };
 
+    const kick = () => {
+      if (!running || raf || !visible) return;
+      lastTs = performance.now();
+      raf = requestAnimationFrame(tick);
+    };
+
     resize();
-    lastTs = performance.now();
-    raf = requestAnimationFrame(tick);
+    kick();
 
     const ro = new ResizeObserver(resize);
     ro.observe(host);
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry?.isIntersecting ?? false;
+        if (visible) kick();
+        else if (raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      },
+      { rootMargin: "40px" },
+    );
+    io.observe(host);
 
     return () => {
       running = false;
       cancelAnimationFrame(raf);
       ro.disconnect();
+      io.disconnect();
     };
   }, []);
 

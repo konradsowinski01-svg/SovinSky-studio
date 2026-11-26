@@ -5,6 +5,7 @@ import {
   getShaderNoiseTexture,
   grainGradientFragmentShader,
 } from "@paper-design/shaders";
+import { getMotionTier } from "../lib/motionTier";
 
 const COLORS = ["#d63a00", "#ff5a00", "#ff7417"];
 const START_FRAME = 10500;
@@ -73,11 +74,26 @@ export function HeroWave({ className }: Props) {
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
+    const tier = getMotionTier();
     let mount: ShaderMount | null = null;
     let cancelled = false;
+    let io: IntersectionObserver | null = null;
+
+    // Soft CSS stand-in when full-screen WebGL would melt mid-range Adreno.
+    if (tier === "low") {
+      host.style.background =
+        "radial-gradient(120% 90% at 70% 20%, #ff7417 0%, #d63a00 42%, transparent 70%), linear-gradient(160deg, #1a0700 0%, #050505 55%)";
+      return () => {
+        host.style.background = "";
+      };
+    }
 
     const noise = getShaderNoiseTexture();
     if (!noise) return;
+
+    const minPixelRatio = tier === "medium" ? 1 : 2;
+    const maxPixelCount =
+      tier === "medium" ? 0.55e6 : devicePixelRatio >= 2 ? 1.6e6 : 2.6e6;
 
     noise
       .decode()
@@ -108,14 +124,27 @@ export function HeroWave({ className }: Props) {
           undefined,
           0.8,
           START_FRAME,
-          2,
-          devicePixelRatio >= 2 ? 1.6e6 : 2.6e6,
+          minPixelRatio,
+          maxPixelCount,
         );
+
+        const hero = host.closest("#hero") ?? host;
+        io = new IntersectionObserver(
+          ([entry]) => {
+            const on = entry?.isIntersecting ?? false;
+            // ShaderMount has no public pause API — dispose offscreen, remount on enter is heavy;
+            // hide canvas to let the browser skip compositing when hero is gone.
+            host.style.visibility = on ? "visible" : "hidden";
+          },
+          { rootMargin: "20% 0px" },
+        );
+        io.observe(hero);
       })
       .catch(() => undefined);
 
     return () => {
       cancelled = true;
+      io?.disconnect();
       mount?.dispose();
       host.querySelectorAll(":scope > canvas").forEach((c) => c.remove());
     };
