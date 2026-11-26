@@ -22,7 +22,7 @@ function whiteVignetteFlash() {
     pointerEvents: "none",
     opacity: "0",
     background:
-      "radial-gradient(ellipse at center, rgba(255,255,255,0) 18%, rgba(255,255,255,0.45) 55%, rgba(255,255,255,0.92) 100%)",
+      "radial-gradient(ellipse at center, rgba(255,255,255,0) 42%, rgba(255,255,255,0.28) 72%, rgba(255,255,255,0.78) 100%)",
     transition: "opacity 140ms ease-out",
   } as CSSStyleDeclaration);
 
