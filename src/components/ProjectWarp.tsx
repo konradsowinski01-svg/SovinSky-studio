@@ -231,9 +231,21 @@ function compile(gl: WebGLRenderingContext, type: number, source: string) {
 type Props = {
   title: string;
   index: number;
+  /** Real project cover — used as the warp/sand texture instead of the procedural poster. */
+  imageSrc?: string;
 };
 
-export function ProjectWarp({ title, index }: Props) {
+function loadCover(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`cover failed: ${src}`));
+    img.src = src;
+  });
+}
+
+export function ProjectWarp({ title, index, imageSrc }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -241,6 +253,18 @@ export function ProjectWarp({ title, index }: Props) {
     if (!canvas) return;
     const tier = getMotionTier();
     const poster = makeTexture(title, index);
+    let cover: HTMLImageElement | HTMLCanvasElement = poster;
+    let cancelled = false;
+
+    const uploadTexture = (
+      gl: WebGLRenderingContext,
+      texture: WebGLTexture,
+      source: HTMLImageElement | HTMLCanvasElement,
+    ) => {
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    };
 
     // Android / low-power: static poster only — no perpetual WebGL rAF × 4 cards.
     if (tier !== "high") {
@@ -256,12 +280,24 @@ export function ProjectWarp({ title, index }: Props) {
         // Match WebGL bleed framing roughly: draw poster in the card core.
         const padX = rect.width * 0.13;
         const padY = rect.height * 0.18;
-        ctx.drawImage(poster, padX, padY, rect.width - padX * 2, rect.height - padY * 2);
+        ctx.drawImage(cover, padX, padY, rect.width - padX * 2, rect.height - padY * 2);
       };
       paint();
       const ro = new ResizeObserver(paint);
       ro.observe(canvas);
-      return () => ro.disconnect();
+      if (imageSrc) {
+        loadCover(imageSrc)
+          .then((img) => {
+            if (cancelled) return;
+            cover = img;
+            paint();
+          })
+          .catch(() => {});
+      }
+      return () => {
+        cancelled = true;
+        ro.disconnect();
+      };
     }
 
     const gl = canvas.getContext("webgl", {
@@ -300,8 +336,16 @@ export function ProjectWarp({ title, index }: Props) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, poster);
+    uploadTexture(gl, texture, poster);
+    if (imageSrc) {
+      loadCover(imageSrc)
+        .then((img) => {
+          if (cancelled) return;
+          cover = img;
+          uploadTexture(gl, texture, img);
+        })
+        .catch(() => {});
+    }
 
     const timeLocation = gl.getUniformLocation(program, "time");
     const aspectLocation = gl.getUniformLocation(program, "aspect");
@@ -404,6 +448,7 @@ export function ProjectWarp({ title, index }: Props) {
     }, { requireReady: true });
 
     return () => {
+      cancelled = true;
       active = false;
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -416,7 +461,7 @@ export function ProjectWarp({ title, index }: Props) {
       gl.deleteShader(vertex);
       gl.deleteShader(fragment);
     };
-  }, [index, title]);
+  }, [index, title, imageSrc]);
 
   return (
     <canvas
