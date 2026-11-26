@@ -14,10 +14,10 @@ export const site = {
   /** Copy tylko na stronę #/about — pierwsza osoba, bliżej człowieka. */
   aboutPage: {
     intro:
-      "Cześć, jestem Konrad. Wolę skracać dystans: bez korpo-mowy, konkretnie i po ludzku. Jeśli masz pomysł albo coś, co trzeba ogarnąć - napisz, pogadamy.",
+      "Cześć, jestem Konrad. Od zawsze fascynowało mnie tworzenie własnych rzeczy i przeradzanie wizji w realne rzeczy.",
     cta: "Napisz do mnie",
     story:
-      "Projektuję i buduję strony oraz aplikacje od podstaw. Zależy mi na wyglądzie, czytelności i tym, żeby produkt naprawdę działał na co dzień. Pracuję szybko, ale nie na skróty - detale i estetyka są dla mnie częścią roboty, nie dodatkiem na koniec.",
+      "Teraz spełniam się, tworząc projekty dla moich klientów, w które zawsze wkładam część siebie — tak, żeby być dumny ze wszystkiego, co stworzę, i tak, żeby moje projekty miały też w sobie artyzm i ciekawe smaczki.",
   },
   serviceGroups: [
     {
