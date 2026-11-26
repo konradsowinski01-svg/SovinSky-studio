@@ -4,6 +4,7 @@
  * dźwięk odpalany/odciszany z timera poza gestem.
  */
 
+import { runCardFx } from "./cardFx";
 import { runCardScroll } from "./cardScroll";
 
 const SRC = `${import.meta.env.BASE_URL}card-intro.mp3`;
@@ -28,12 +29,16 @@ export function startCardMusicFromTap(): void {
   const playAttempt = a.play();
   if (playAttempt) {
     void playAttempt.then(
-      () => runCardScroll(a),
+      () => {
+        runCardScroll(a);
+        runCardFx(a);
+      },
       () => {
         started = false;
       },
     );
   } else {
     runCardScroll(a);
+    runCardFx(a);
   }
 }

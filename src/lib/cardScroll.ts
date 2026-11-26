@@ -1,12 +1,12 @@
+import { CARD_LEAD_IN_SEC } from "./cardFx";
 import { getLenis } from "./lenisStore";
 
 /**
  * Autoscroll `#/w` zsynchronizowany z piosenką.
- * Czasy w `CUES` są w sekundach piosenki (bez 1 s ciszy na początku pliku).
+ * Czasy w `CUES` są w sekundach piosenki (bez ciszy LEAD_IN).
  */
 
-/** Cisza wklejona na początku card-intro.mp3. */
-const LEAD_IN_SEC = 0.9;
+const LEAD_IN_SEC = CARD_LEAD_IN_SEC;
 /** Odstęp nagłówka od dolnej krawędzi topbara. */
 const ANCHOR_GAP_PX = 24;
 /** „Bardzo powoli” po dojechaniu do celu. */
