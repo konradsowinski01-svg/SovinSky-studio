@@ -35,7 +35,7 @@ export function About() {
             </span>
           }
         />
-        <div className={styles.services} data-services="">
+        <div className={styles.services} data-services="" data-card-anchor="services">
           <p className={styles.servicesLabel} data-fade="">
             Usługi
           </p>

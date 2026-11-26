@@ -46,9 +46,10 @@ const CUES: Cue[] = [
   // 3: 4. kafelek (ARNGCOR Web) na środku
   { at: 11, duration: 1.4, anchor: "arngcor-web", align: "center" },
   { at: 13.4, duration: 1.4, anchor: "about", align: "center", offsetPx: -220 },
-  { at: 16, duration: 1.4, deltaPx: 400 },
-  // 18.5 − 50 ms; po dojechaniu (+1.4) + 1 s pauzy → powrót na górę
-  { at: 18.45, duration: 1.4, deltaPx: 800 },
+  // Usługi pod topbarem (po większej luce od opisu studia)
+  { at: 16, duration: 1.4, anchor: "services", align: "top" },
+  // Lekki zjazd w głąb usług, potem powrót na górę
+  { at: 18.45, duration: 1.4, anchor: "services", align: "center", offsetPx: 80 },
   // Wolny powrót na home (hero / #top), potem odblokuj scroll.
   { at: 20.85, duration: 3.0, toTop: true, hold: true, ease: "inout" },
 ];

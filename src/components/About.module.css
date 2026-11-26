@@ -54,7 +54,7 @@
 }
 
 .services {
-  margin-top: clamp(110px, 14vw, 180px);
+  margin-top: clamp(160px, 20vw, 260px);
 }
 
 .servicesLabel {
