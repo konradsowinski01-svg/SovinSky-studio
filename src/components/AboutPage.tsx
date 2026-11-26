@@ -27,7 +27,7 @@ export function AboutPage() {
       <section className={styles.content}>
         <div className={styles.story}>
           <PolaroidPortrait alt={`${site.brandShort}, portret`} className={styles.portrait} />
-          <p className={styles.lead}>{site.aboutPage.story}</p>
+          {site.aboutPage.story ? <p className={styles.lead}>{site.aboutPage.story}</p> : null}
         </div>
 
         <div className={styles.services}>

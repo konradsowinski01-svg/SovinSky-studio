@@ -13,10 +13,10 @@ export const site = {
     "SowinSky Studio to miejsce, gdzie pomysł przeradza się w szkic, a następnie w realny produkt. Wszystko co robię powstaje z dbałością o detale i estetykę. Buduję strony i aplikacje od podstaw. Pracuję szybko, z naciskiem na wygląd, czytelność i funkcjonalność.",
   /** Copy tylko na stronę #/about — pierwsza osoba, bliżej człowieka. */
   aboutPage: {
-    intro: "",
+    intro:
+      "Cześć jestem Konrad od zawsze lubiłem wyrażać się poprzez swoją twórczość i przeradzanie wizji w realne rzeczy. Teraz spełniam się Tworząc projekty dla moich klientów w które zawsze wkładam część siebie tak żeby być dumny ze wszystkiego co stworzę i tak żeby moje projekty miały też w sobie artyzm i ciekawe smaczki.",
     cta: "Napisz do mnie",
-    story:
-      "Cześć jestem Konrad od zawsze fascynowało mnie tworzenie własnych rzeczy i przeradzanie wizji w realne rzeczy. Teraz spełniam się Tworząc projekty dla moich klientów w które zawsze wkładam część siebie tak żeby być dumny ze wszystkiego co stworzę i tak żeby moje projekty miały też w sobie artyzm i ciekawe smaczki.",
+    story: "",
   },
   serviceGroups: [
     {
