@@ -203,7 +203,6 @@ export function PortraitCloud() {
     let drawFrame = 0;
     let cssW = 0;
     let cssH = 0;
-    let cssTop = 0;
     const tier = getMotionTier();
     const reduceMotion =
       tier === "low" || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -235,10 +234,14 @@ export function PortraitCloud() {
     let layoutCache = {
       aboutW: 0,
       aboutH: 0,
-      fadeAnchor: 0,
-      contactTop: 0,
+      zoneAlpha: 0,
       light: false,
       at: 0,
+    };
+
+    const smoothstep = (edge0: number, edge1: number, x: number) => {
+      const t = Math.max(0, Math.min(1, (x - edge0) / Math.max(1e-6, edge1 - edge0)));
+      return t * t * (3 - 2 * t);
     };
 
     // Quantized alpha fillStyles to avoid string alloc per dot.
@@ -266,45 +269,40 @@ export function PortraitCloud() {
       return 0.299 * r + 0.587 * g + 0.114 * b > 140;
     };
 
-    const syncCssBox = () => {
-      const rect = canvas.getBoundingClientRect();
-      cssW = rect.width;
-      cssH = rect.height;
-      cssTop = rect.top;
-      return rect;
-    };
-
     const resize = () => {
-      const rect = syncCssBox();
+      const rect = canvas.getBoundingClientRect();
+      cssW = Math.max(1, rect.width || window.innerWidth);
+      cssH = Math.max(1, rect.height || window.innerHeight);
       const dpr = canvasDpr(tier);
-      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      canvas.width = Math.max(1, Math.floor(cssW * dpr));
+      canvas.height = Math.max(1, Math.floor(cssH * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       layoutCache.at = 0;
     };
 
-    const refreshLayout = (w: number, h: number, force = false) => {
+    /** Scroll-driven visibility only — helix stays locked in the viewport. */
+    const refreshLayout = (w: number, h: number) => {
       const now = performance.now();
-      if (!force && now - layoutCache.at < 120) return layoutCache;
-      // Keep top in sync with scroll without full resize.
-      cssTop = canvas.getBoundingClientRect().top;
       const about = document.getElementById("about");
       const aboutRect = about?.getBoundingClientRect();
       const lastProj = document.querySelector<HTMLElement>("#work [data-proj]:last-of-type");
-      const fadeAnchor = lastProj
-        ? lastProj.getBoundingClientRect().bottom - cssTop
-        : (document.getElementById("work")?.getBoundingClientRect().bottom ?? 0) - cssTop;
+      const lastBottom = lastProj
+        ? lastProj.getBoundingClientRect().bottom
+        : (document.getElementById("work")?.getBoundingClientRect().bottom ?? h);
       const contact = document.getElementById("contact");
-      const contactTop = contact
-        ? contact.getBoundingClientRect().top - cssTop
-        : h * 0.85;
+      const contactTop = contact?.getBoundingClientRect().top ?? h * 0.85;
+
+      // Fade in as the last Work tile rises; full during About; out through Contact.
+      const fadeIn = 1 - smoothstep(h * 0.12, h * 0.92, lastBottom);
+      const fadeOut = smoothstep(h * -0.05, h * 0.58, contactTop);
+      const light = now - layoutCache.at > 200 ? isLightBg() : layoutCache.light;
+
       layoutCache = {
         aboutW: aboutRect?.width || w,
         aboutH: aboutRect?.height || Math.min(h, window.innerHeight),
-        fadeAnchor,
-        contactTop,
-        light: isLightBg(),
-        at: now,
+        zoneAlpha: Math.max(0, Math.min(1, fadeIn * fadeOut)),
+        light,
+        at: now - layoutCache.at > 200 ? now : layoutCache.at,
       };
       return layoutCache;
     };
@@ -338,54 +336,37 @@ export function PortraitCloud() {
       const sinP = Math.sin(PITCH);
 
       const layout = refreshLayout(w, h);
+      const zoneAlpha = layout.zoneAlpha;
+      if (zoneAlpha < 0.01) {
+        // Still clear so we don't leave a frozen frame when fading out.
+        return false;
+      }
+
       const mobile = w < 810;
       const refW = layout.aboutW;
       const refH = layout.aboutH;
       const scale = Math.min(refW, Math.min(refH, window.innerHeight)) * (mobile ? 1.85 : 2.55);
+      // Sticky pin keeps the canvas in the viewport; pin helix to visual center.
+      // Live rect.top every frame so a sticky miss never makes DNA scroll away.
+      const rectTop = canvas.getBoundingClientRect().top;
       const ox = w * (mobile ? 0.62 : 0.74);
-      const oy = window.innerHeight * 0.5 - cssTop;
+      const oy = window.innerHeight * 0.5 - rectTop;
       const light = layout.light;
-
-      const fadeAnchor = layout.fadeAnchor;
-      const fadeInStart = fadeAnchor - Math.min(220, h * 0.1);
-      const fadeInEnd = fadeInStart + Math.min(h * 0.42, window.innerHeight * 0.85);
-
-      const contactTop = layout.contactTop;
-      const bottomTrim = 270;
-      const fadeOutStart = contactTop + Math.min(h * 0.08, 100) - bottomTrim;
-      const fadeOutEnd = h * 0.98 - bottomTrim;
-
-      const edgeFadeAt = (py: number) => {
-        let f = 1;
-        if (py <= fadeInStart) f = 0;
-        else if (py < fadeInEnd) {
-          const t = (py - fadeInStart) / Math.max(1, fadeInEnd - fadeInStart);
-          f = t * t * (3 - 2 * t);
-          f *= f;
-        }
-        if (py >= fadeOutEnd) f = 0;
-        else if (py > fadeOutStart) {
-          const t = (py - fadeOutStart) / Math.max(1, fadeOutEnd - fadeOutStart);
-          f *= 1 - t * t * (3 - 2 * t);
-        }
-        return f;
-      };
 
       const magnetR = Math.min(w, h) * (coarse ? 0.4 : 0.28);
       const dnaHitR = Math.min(refW, refH) * (coarse ? 0.85 : 0.62);
       const wantMagnet =
         magnetsEnabled &&
         pointerOn &&
-        Math.hypot(pointerX - ox, pointerY - oy) < dnaHitR &&
-        pointerY > fadeInStart - (coarse ? 40 : 0) &&
-        pointerY < fadeOutEnd;
+        zoneAlpha > 0.35 &&
+        Math.hypot(pointerX - ox, pointerY - oy) < dnaHitR;
 
       // Drift is tiny — recompute every 2nd frame; reuse cached pose on the odd frame.
       const doDrift = !reduceMotion && drawFrame % 2 === 0;
       drawFrame++;
       const n = dots.length;
       ensureProjected(n);
-      const opacityMul = mobile ? (light ? 0.42 : 0.48) : 1;
+      const opacityMul = (mobile ? (light ? 0.42 : 0.48) : 1) * zoneAlpha;
       const sizeMul = light ? 1.2 : 1.1;
       const alphaMul = light ? 1.35 : 1.15;
 
@@ -404,7 +385,7 @@ export function PortraitCloud() {
         let px = ox + scratch.x * scale * scratch.p;
         let py = oy - scratch.y * scale * scratch.p;
         let pr = d.r * scratch.p * (1.05 + depth * 0.4) * sizeMul;
-        let pa = d.a * (0.7 + depth * 0.45) * alphaMul * edgeFadeAt(py) * opacityMul;
+        let pa = d.a * (0.7 + depth * 0.45) * alphaMul * opacityMul;
 
         if (magnet > 0.02) {
           const mdx = pointerX - px;
@@ -526,21 +507,25 @@ export function PortraitCloud() {
       }
     };
 
-    const ro = new ResizeObserver(() => {
+    const onResize = () => {
       resize();
       if (visible && pageOn) draw(performance.now() * 0.001);
-    });
+    };
+    window.addEventListener("resize", onResize);
+    const ro = new ResizeObserver(onResize);
     ro.observe(canvas);
 
+    const field = canvas.closest("[data-dna-field]") ?? canvas;
     const io = new IntersectionObserver(
       ([entry]) => {
         visible = entry?.isIntersecting ?? false;
+        canvas.style.visibility = visible ? "visible" : "hidden";
         if (visible && pageOn) kick();
         else stopRaf();
       },
-      { rootMargin: "80px" },
+      { rootMargin: "40px" },
     );
-    io.observe(canvas);
+    io.observe(field);
 
     const offActivity = onPageActivity((active) => {
       pageOn = active;
@@ -550,7 +535,6 @@ export function PortraitCloud() {
 
     const syncPointer = (e: PointerEvent, pressed?: boolean) => {
       const rect = canvas.getBoundingClientRect();
-      cssTop = rect.top;
       pointerX = e.clientX - rect.left;
       pointerY = e.clientY - rect.top;
       const inBounds =
@@ -595,9 +579,10 @@ export function PortraitCloud() {
       cancelled = true;
       running = false;
       stopRaf();
-      ro.disconnect();
       io.disconnect();
+      ro.disconnect();
       offActivity();
+      window.removeEventListener("resize", onResize);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);

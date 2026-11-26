@@ -6,8 +6,10 @@ import styles from "./DnaField.module.css";
 export function DnaField({ children }: { children: ReactNode }) {
   return (
     <div className={styles.field} data-dna-field="">
-      <PortraitCloud />
-      {children}
+      <div className={styles.pin} aria-hidden="true">
+        <PortraitCloud />
+      </div>
+      <div className={styles.content}>{children}</div>
     </div>
   );
 }
