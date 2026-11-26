@@ -17,7 +17,7 @@ export function AboutPage() {
         </div>
         <h1 className="sr-only">O mnie</h1>
         <div className={styles.intro}>
-          <p>{site.aboutPage.intro}</p>
+          {site.aboutPage.intro ? <p>{site.aboutPage.intro}</p> : null}
           <a href={mailto} className={styles.cta}>
             {site.aboutPage.cta} <span aria-hidden="true">→</span>
           </a>
