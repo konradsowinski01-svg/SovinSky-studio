@@ -3,7 +3,7 @@
  * (czasy w sekundach utworu, bez ciszy LEAD_IN).
  */
 
-export const CARD_LEAD_IN_SEC = 0.9;
+export const CARD_LEAD_IN_SEC = 0.85;
 
 type FxCue = {
   at: number;
