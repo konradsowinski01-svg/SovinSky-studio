@@ -11,14 +11,14 @@ type FxCue = {
 };
 
 const FX: FxCue[] = [
-  { at: 4.9, run: () => sideEdgeFlash(700) },
+  { at: 4.84, run: () => sideEdgeFlash(700) },
   { at: 7, run: () => sideEdgeFlash(800) },
 ];
 
-/** Biały flash tylko z lewej/prawej krawędzi. */
+/** Biały flash tylko z lewej/prawej krawędzi — miękki, blisko brzegów. */
 function sideEdgeFlash(durationMs: number) {
-  const fadeIn = Math.min(160, durationMs * 0.2);
-  const fadeOut = Math.min(480, durationMs * 0.55);
+  const fadeIn = Math.min(220, durationMs * 0.28);
+  const fadeOut = Math.min(520, durationMs * 0.62);
   const holdUntil = Math.max(fadeIn + 40, durationMs - fadeOut);
 
   const el = document.createElement("div");
@@ -30,8 +30,8 @@ function sideEdgeFlash(durationMs: number) {
     pointerEvents: "none",
     opacity: "0",
     background:
-      "linear-gradient(90deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.28) 12%, transparent 28%, transparent 72%, rgba(255,255,255,0.28) 88%, rgba(255,255,255,0.88) 100%)",
-    transition: `opacity ${fadeIn}ms ease-out`,
+      "linear-gradient(90deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.22) 6%, rgba(255,255,255,0.06) 12%, transparent 18%, transparent 82%, rgba(255,255,255,0.06) 88%, rgba(255,255,255,0.22) 94%, rgba(255,255,255,0.62) 100%)",
+    transition: `opacity ${fadeIn}ms ease-in-out`,
   } as CSSStyleDeclaration);
 
   document.body.appendChild(el);
@@ -40,7 +40,7 @@ function sideEdgeFlash(durationMs: number) {
   });
 
   window.setTimeout(() => {
-    el.style.transition = `opacity ${fadeOut}ms ease-in`;
+    el.style.transition = `opacity ${fadeOut}ms ease-in-out`;
     el.style.opacity = "0";
   }, holdUntil);
 
