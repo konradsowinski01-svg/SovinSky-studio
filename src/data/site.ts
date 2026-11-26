@@ -61,7 +61,7 @@ export const projects: Project[] = [
     tone: "warm",
     gradient: "linear-gradient(145deg, #ff5a1f 0%, #9a3412 42%, #1a0a05 100%)",
     href: "https://apps.apple.com/app/arngcor/id6772146674",
-    cover: "projects/arngcor/cover.jpg",
+    cover: "projects/arngcor/cover-v2.jpg",
   },
   {
     slug: "rrclub",
