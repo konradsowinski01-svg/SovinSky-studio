@@ -4,6 +4,8 @@ import { ProjectWarp } from "./ProjectWarp";
 import { RollLink } from "./RollLink";
 import styles from "./Work.module.css";
 
+const asset = (path: string) => `${import.meta.env.BASE_URL}${path}`;
+
 export function Work() {
   return (
     <section id="work" className={styles.work} aria-label="Wybrane projekty">
@@ -36,24 +38,38 @@ export function Work() {
             >
               <div className={styles.bend} data-proj-bend="">
                 <div className={`${styles.visual} ${styles[project.tone]}`} data-proj-visual="">
-                  <ProjectWarp title={project.title} index={index} />
-                  <div className={styles.sun} aria-hidden="true" data-proj-sun="" />
-                  <div className={styles.frame} aria-hidden="true">
-                    <div className={styles.chrome}>
-                      <span />
-                      <span />
-                      <span />
+                  {project.cover ? (
+                    <div className={styles.appStage}>
+                      <img
+                        className={styles.appCover}
+                        src={asset(project.cover)}
+                        alt={`${project.title} — podgląd aplikacji`}
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </div>
-                    <div className={styles.screen}>
-                      <p className={styles.screenBrand}>{project.title}</p>
-                      <div className={styles.screenLines}>
-                        <i />
-                        <i />
-                        <i />
+                  ) : (
+                    <>
+                      <ProjectWarp title={project.title} index={index} />
+                      <div className={styles.sun} aria-hidden="true" data-proj-sun="" />
+                      <div className={styles.frame} aria-hidden="true">
+                        <div className={styles.chrome}>
+                          <span />
+                          <span />
+                          <span />
+                        </div>
+                        <div className={styles.screen}>
+                          <p className={styles.screenBrand}>{project.title}</p>
+                          <div className={styles.screenLines}>
+                            <i />
+                            <i />
+                            <i />
+                          </div>
+                          <div className={styles.screenCta} />
+                        </div>
                       </div>
-                      <div className={styles.screenCta} />
-                    </div>
-                  </div>
+                    </>
+                  )}
                   <span className={styles.index}>{String(index + 1).padStart(2, "0")}</span>
                 </div>
               </div>

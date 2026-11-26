@@ -48,6 +48,8 @@ export type Project = {
   tone: "dark" | "warm" | "bright";
   /** Zewnętrzny link (np. App Store). Bez tego — #contact. */
   href?: string;
+  /** Okładka / kolaż (ścieżka w `public/`). */
+  cover?: string;
 };
 
 export const projects: Project[] = [
@@ -59,6 +61,7 @@ export const projects: Project[] = [
     tone: "warm",
     gradient: "linear-gradient(145deg, #ff5a1f 0%, #9a3412 42%, #1a0a05 100%)",
     href: "https://apps.apple.com/app/arngcor/id6772146674",
+    cover: "projects/arngcor/cover.jpg",
   },
   {
     slug: "firma-online",

@@ -7,7 +7,12 @@ import styles from "./Portfolio.module.css";
 
 export function Portfolio() {
   const shots = useMemo(
-    () => projects.map((project, index) => makeTexture(project.title, index).toDataURL("image/jpeg", 0.86)),
+    () =>
+      projects.map((project, index) =>
+        project.cover
+          ? `${import.meta.env.BASE_URL}${project.cover}`
+          : makeTexture(project.title, index).toDataURL("image/jpeg", 0.86),
+      ),
     [],
   );
   const mailto = `mailto:${site.email}?subject=${encodeURIComponent("Sprawa projektu")}`;
