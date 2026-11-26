@@ -19,6 +19,11 @@ type Cue = {
   duration: number;
   /** `data-card-anchor` elementu docelowego. */
   anchor?: string;
+  /**
+   * Z `anchor`: zatrzymaj w luce między tym a tym kotwicą
+   * (środek szczeliny na środku ekranu).
+   */
+  between?: string;
   /** `top` — tuż pod topbarem, `center` — środek elementu na środku ekranu. */
   align?: "top" | "center";
   /** Korekta pozycji w px (ujemne = wyżej). */
@@ -34,10 +39,12 @@ type Cue = {
 };
 
 const CUES: Cue[] = [
+  // 1: nagłówek prac (jak teraz)
   { at: 6, duration: 1.4, anchor: "work-heading", align: "top" },
-  { at: 8.8, duration: 1.4, anchor: "rrclub", align: "top" },
-  { at: 11, duration: 1.4, anchor: "rkm-trade", align: "center" },
-  // Bez 4. kafelka — od razu About, potem dryf i powrót na górę.
+  // 2: luka między RRclub (2) a R.K.M. TRADE (3)
+  { at: 8.8, duration: 1.4, anchor: "rrclub", between: "rkm-trade" },
+  // 3: 4. kafelek (ARNGCOR Web) na środku
+  { at: 11, duration: 1.4, anchor: "arngcor-web", align: "center" },
   { at: 13.4, duration: 1.4, anchor: "about", align: "center", offsetPx: -220 },
   { at: 16, duration: 1.4, deltaPx: 400 },
   // 18.5 − 50 ms; po dojechaniu (+1.4) + 1 s pauzy → powrót na górę
@@ -75,14 +82,27 @@ function layoutTop(el: HTMLElement): number {
   return top;
 }
 
+function anchorEl(name: string) {
+  return document.querySelector<HTMLElement>(`[data-card-anchor="${name}"]`);
+}
+
 function anchorY(cue: Cue, fromY: number): number | null {
   if (cue.toTop) return 0;
   if (cue.deltaPx != null) return fromY + cue.deltaPx;
   if (!cue.anchor) return null;
-  const el = document.querySelector<HTMLElement>(`[data-card-anchor="${cue.anchor}"]`);
+  const el = anchorEl(cue.anchor);
   if (!el) return null;
-  const top = layoutTop(el);
   const extra = cue.offsetPx ?? 0;
+
+  // Środek szczeliny między dwoma kafelkami → środek viewportu.
+  if (cue.between) {
+    const next = anchorEl(cue.between);
+    if (!next) return null;
+    const gapMid = (layoutTop(el) + el.offsetHeight + layoutTop(next)) / 2;
+    return gapMid - window.innerHeight / 2 + extra;
+  }
+
+  const top = layoutTop(el);
   if (cue.align === "center") {
     return top + el.offsetHeight / 2 - window.innerHeight / 2 + extra;
   }
