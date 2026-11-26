@@ -78,8 +78,15 @@ export function CardIntro({ onReveal, onDone }: Props) {
   const onPointerDown = () => {
     if (begun || starting.current) return;
     starting.current = true;
-    startCardMusicFromTap();
-    setBegun(true);
+    // play() musi wystartować w geście; begun dopiero po udanym play
+    // (na Androidzie wcześniejszy fail blokował scroll, a UI już „szło”).
+    void startCardMusicFromTap().then((ok) => {
+      if (!ok) {
+        starting.current = false;
+        return;
+      }
+      setBegun(true);
+    });
   };
 
   return (
