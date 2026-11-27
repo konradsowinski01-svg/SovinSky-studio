@@ -50,6 +50,8 @@ export type Project = {
   href?: string;
   /** Okładka brandowa (ścieżka w `public/`). */
   cover?: string;
+  /** Krótki opis na hover w portfolio. */
+  blurb?: string;
 };
 
 export const projects: Project[] = [
@@ -62,6 +64,8 @@ export const projects: Project[] = [
     gradient: "linear-gradient(145deg, #ff5a1f 0%, #9a3412 42%, #1a0a05 100%)",
     href: "https://apps.apple.com/app/arngcor/id6772146674",
     cover: "projects/arngcor/cover-v2.jpg",
+    blurb:
+      "Aplikacja złożona z katalogów i kompilatora do ćwiczeń i pomocy w bólu oraz do utrzymania mobilnego ciała bez barier.",
   },
   {
     slug: "rrclub",
