@@ -99,5 +99,7 @@ export const projects: Project[] = [
     gradient: "linear-gradient(160deg, #c2410c 0%, #431407 50%, #050505 100%)",
     href: "https://arngcor.pl",
     cover: "projects/arngcor-web/cover-v2.jpg",
+    blurb:
+      "ARNGCOR to projekt aplikacji mobilnej i platformy internetowej stworzonej z myślą o osobach, które chcą świadomie zadbać o swoje ciało, rozwijać mobilność i wprowadzić regularny ruch do codziennego życia.\n\nCelem projektu strony internetowej było stworzenie spójnej przestrzeni prezentującej aplikację, jej możliwości oraz filozofię stojącą za marką. Witryna w przystępny i atrakcyjny wizualnie sposób przedstawia funkcjonalności ARNGCOR, zachęcając użytkowników do poznania aplikacji i rozpoczęcia własnej praktyki.\n\nProjekt łączy nowoczesny design z przejrzystą strukturą treści i intuicyjną nawigacją. Szczególny nacisk położono na estetykę, czytelność przekazu oraz odpowiednie wyeksponowanie aplikacji i jej najważniejszych funkcji.\n\nStrona stanowi centralny punkt obecności marki w internecie, łącząc komunikację wizualną z prezentacją produktu i ułatwiając użytkownikom przejście do pobrania aplikacji z App Store.",
   },
 ];
