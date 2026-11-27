@@ -87,6 +87,8 @@ export const projects: Project[] = [
     gradient: "linear-gradient(135deg, #fb923c 0%, #ea580c 35%, #111111 100%)",
     href: "https://rkmtrade.pl",
     cover: "projects/rkm-trade/cover.jpg",
+    blurb:
+      "R.K.M. TRADE to firma działająca w branży rolniczej, specjalizująca się w handlu maszynami i urządzeniami rolniczymi oraz usługach związanych z ich obsługą i serwisowaniem.\n\nCelem projektu było stworzenie profesjonalnej strony internetowej, która w przejrzysty sposób prezentuje działalność firmy, jej ofertę oraz zakres świadczonych usług. Witryna stanowi cyfrową wizytówkę marki, ułatwiając potencjalnym klientom poznanie firmy i nawiązanie kontaktu.\n\nProjekt skupia się na czytelnej prezentacji informacji, intuicyjnej nawigacji i funkcjonalności, dzięki którym użytkownicy mogą szybko odnaleźć interesujące ich treści.\n\nStrona została zaprojektowana z myślą o budowaniu profesjonalnego wizerunku firmy i zapewnieniu jej solidnej obecności w internecie.",
   },
   {
     slug: "arngcor-web",
