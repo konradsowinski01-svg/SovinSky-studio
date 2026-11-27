@@ -103,24 +103,31 @@
   inset: 0;
   z-index: 1;
   display: grid;
-  align-items: end;
-  padding: clamp(16px, 2.4vw, 28px);
-  background: linear-gradient(
-    180deg,
-    transparent 20%,
-    color-mix(in srgb, var(--black) 72%, transparent) 72%,
-    color-mix(in srgb, var(--black) 88%, transparent) 100%
-  );
+  align-items: stretch;
+  padding: clamp(12px, 1.8vw, 20px);
+  background: color-mix(in srgb, var(--black) 78%, transparent);
+  backdrop-filter: blur(6px);
   opacity: 0;
   transition: opacity 0.35s ease;
   pointer-events: none;
+  overflow: hidden;
 }
 
-.overlay p {
+.blurb {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 0.7em;
+  align-content: start;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.blurb p {
   margin: 0;
-  max-width: 34em;
-  font-size: clamp(0.92rem, 1.5vw, 1.08rem);
-  line-height: 1.45;
+  font-size: clamp(0.78rem, 1.15vw, 0.92rem);
+  line-height: 1.42;
   letter-spacing: -0.01em;
   color: color-mix(in srgb, var(--ink) 96%, transparent);
   text-wrap: pretty;
@@ -134,17 +141,13 @@
 .item:hover .overlay,
 .item:focus-visible .overlay {
   opacity: 1;
+  pointer-events: auto;
 }
 
 @media (hover: none) {
   .overlay {
     opacity: 1;
-    background: linear-gradient(
-      180deg,
-      transparent 35%,
-      color-mix(in srgb, var(--black) 68%, transparent) 78%,
-      color-mix(in srgb, var(--black) 86%, transparent) 100%
-    );
+    pointer-events: auto;
   }
 }
 

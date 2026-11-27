@@ -65,7 +65,7 @@ export const projects: Project[] = [
     href: "https://apps.apple.com/app/arngcor/id6772146674",
     cover: "projects/arngcor/cover-v2.jpg",
     blurb:
-      "Aplikacja złożona z katalogów i kompilatora do ćwiczeń i pomocy w bólu oraz do utrzymania mobilnego ciała bez barier.",
+      "ARNGCOR to aplikacja mobilna, która pomaga budować zdrowe nawyki ruchowe, rozwijać mobilność i poprawiać elastyczność ciała. Łączy elementy jogi, rozciągania i ćwiczeń inspirowanych fizjoterapią, tworząc przestrzeń do codziennej pracy nad własnym ciałem.\n\nZamiast przypadkowych zestawów ćwiczeń otrzymujesz praktykę dopasowaną do swoich potrzeb, możliwości i wyznaczonych celów. Aplikacja uwzględnia Twój poziom sprawności, aktywność fizyczną i indywidualne preferencje, pomagając znaleźć odpowiednią równowagę między ruchem, regeneracją i rozwojem.\n\nW ARNGCOR znajdziesz codzienne sesje ruchowe, programy rozwijające konkretne umiejętności, takie jak mostek i szpagat, a także krótkie zestawy ćwiczeń ukierunkowane na napięcia i dyskomfort w różnych obszarach ciała.\n\nKażda praktyka to kolejny krok w kierunku większej swobody ruchu. Bez presji, bez konieczności spędzania godzin na treningach i bez potrzeby samodzielnego układania planów.\n\nARNGCOR powstał z myślą o tym, żeby świadomy ruch stał się naturalną częścią codziennego życia.",
   },
   {
     slug: "rrclub",

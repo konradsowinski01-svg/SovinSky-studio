@@ -81,7 +81,11 @@ export function Portfolio() {
                 <img src={shots[index]} alt={`${project.title}, podgląd projektu`} loading="lazy" />
                 {project.blurb ? (
                   <div className={styles.overlay}>
-                    <p>{project.blurb}</p>
+                    <div className={styles.blurb}>
+                      {project.blurb.split(/\n\n+/).map((paragraph) => (
+                        <p key={paragraph.slice(0, 24)}>{paragraph}</p>
+                      ))}
+                    </div>
                   </div>
                 ) : null}
               </div>
