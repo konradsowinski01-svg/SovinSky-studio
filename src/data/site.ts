@@ -14,7 +14,7 @@ export const site = {
   /** Copy tylko na stronę #/about — pierwsza osoba, bliżej człowieka. */
   aboutPage: {
     intro:
-      "Cześć jestem Konrad od zawsze lubiłem wyrażać się poprzez swoją twórczość i przeradzanie wizji w realne rzeczy. Teraz spełniam się Tworząc projekty dla moich klientów w które zawsze wkładam część siebie tak żeby być dumny ze wszystkiego co stworzę i tak żeby moje projekty miały też w sobie artyzm i ciekawe smaczki.",
+      "Cześć, jestem Konrad. Od zawsze lubiłem wyrażać siebie poprzez twórczość i zamieniać własne wizje w rzeczywistość. Dziś realizuję tę pasję, tworząc projekty dla swoich klientów. W każdy z nich wkładam cząstkę siebie, dbając o to, by efekt końcowy był czymś, z czego naprawdę mogę być dumny. Lubię, gdy poza estetyką projekt ma również swój charakter, artystyczny sznyt i drobne detale, które nadają mu wyjątkowości.",
     cta: "Napisz do mnie",
     story: "",
   },
