@@ -16,7 +16,8 @@ export const site = {
     intro:
       "Cześć, jestem Konrad. Od zawsze lubiłem wyrażać siebie poprzez twórczość i zamieniać własne wizje w rzeczywistość. Dziś realizuję tę pasję, tworząc projekty dla swoich klientów. W każdy z nich wkładam cząstkę siebie, dbając o to, by efekt końcowy był czymś, z czego naprawdę mogę być dumny. Lubię, gdy poza estetyką projekt ma również swój charakter, artystyczny sznyt i drobne detale, które nadają mu wyjątkowości.",
     cta: "Napisz do mnie",
-    story: "",
+    story:
+      "Buduję aplikacje iOS i Android, strony WWW, sklepy i web appki — od szkicu przez kod po wrzutkę do sklepu albo na serwer. Robię też autorskie rzeczy pod konkretną firmę: panele, automatyzacje, produkty które mają wyglądać i działać.",
   },
   serviceGroups: [
     {
