@@ -17,7 +17,7 @@ export const site = {
       "Cześć, jestem Konrad. Od zawsze lubiłem wyrażać siebie poprzez twórczość i zamieniać własne wizje w rzeczywistość. Dziś realizuję tę pasję, tworząc projekty dla swoich klientów. W każdy z nich wkładam cząstkę siebie, dbając o to, by efekt końcowy był czymś, z czego naprawdę mogę być dumny. Lubię, gdy poza estetyką projekt ma również swój charakter, artystyczny sznyt i drobne detale, które nadają mu wyjątkowości.",
     cta: "Napisz do mnie",
     story:
-      "Buduję aplikacje iOS i Android, strony WWW, sklepy internetowe i web appki. Zaczynam od pomysłu i szkicu, potem koduję, dopracowuję detale i dowożę gotowy produkt: publikację w App Store albo Sklepie Play, albo stronę postawioną na serwerze. Projektuję i wdrażam też rozwiązania szyte pod konkretną firmę: panele wewnętrzne, automatyzacje i własne rozwiązania, które mają wyglądać dobrze i działać na co dzień.",
+      "Buduję aplikacje iOS i Android, strony WWW, sklepy internetowe i web appki. Zaczynam od pomysłu i szkicu, potem koduję, dopracowuję detale i dowożę gotowy produkt: publikację w App Store albo Sklepie Play, lub stronę działającą na serwerze. Projektuję i wdrażam też rozwiązania szyte pod konkretną firmę: panele wewnętrzne, automatyzacje i własne rozwiązania, które mają wyglądać dobrze i działać na co dzień.",
   },
   serviceGroups: [
     {
