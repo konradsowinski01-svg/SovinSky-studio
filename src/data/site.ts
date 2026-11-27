@@ -75,6 +75,8 @@ export const projects: Project[] = [
     tone: "dark",
     gradient: "linear-gradient(155deg, #1a1028 0%, #2a1840 40%, #050505 100%)",
     cover: "projects/rrclub/cover-v4.jpg",
+    blurb:
+      "RRclub to prywatna aplikacja klubowa do gry w pokera z przyjaciółmi na chipach i punktach klubowych. Zamiast otwartego kasyna dostajesz zamknięty klub: lobby, żywe stoły i rozgrywkę Texas Hold'em w czasie rzeczywistym, bez prawdziwych pieniędzy i bez wypłat gotówki.\n\nChipy w RRclub nie mają wartości pieniężnej. Służą wyłącznie do rozrywki w gronie klubu. Admin zarządza saldem członków przez Counter, akceptuje nowe konta i prowadzi życie klubu od środka, zamiast zostawiać to przypadkowym transferom między graczami.\n\nW lobby tworzysz i dołączasz do stołów, wybierasz buy-in i miejsce, a potem grasz live: fold, call, raise, blinds, ulice aż do showdownu. Aplikacja wspiera też grę na wielu stołach naraz, historię rąk, powiadomienia o starcie gry oraz narzędzia administracyjne: rankingi, członków, strefy, podatki klubowe i bad beat.\n\nRRclub powstał jako kompletny produkt klubowy na iOS i Android. Od rejestracji i akceptacji członków, przez lobby i serwer gry, po detale stołu i push, kiedy ktoś odpala rozdanie, a Ty akurat nie siedzisz przy feltcie.",
   },
   {
     slug: "rkm-trade",
