@@ -1,0 +1,3 @@
+# Stdlib-only for core (Python 3.9+). No third-party deps required.
+# Optional: pip install -r requirements.txt if you add extras later.
+

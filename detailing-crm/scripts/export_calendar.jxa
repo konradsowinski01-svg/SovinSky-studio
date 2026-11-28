@@ -1,0 +1,108 @@
+#!/usr/bin/osascript -l JavaScript
+/**
+ * Export Calendar.app events to JSON on stdout.
+ *
+ * Args (via argv):
+ *   0: start date ISO (YYYY-MM-DD)
+ *   1: end date ISO (YYYY-MM-DD)
+ *   2: optional calendar name filter (substring, case-insensitive). Empty = all.
+ *
+ * Note: Calendar's whose{} date filters are unreliable — we pull events()
+ * and filter dates in JS.
+ */
+
+function run(argv) {
+  var startIso = argv[0] || "2021-01-01";
+  var endIso = argv[1] || "2026-12-31";
+  var calendarFilter = (argv[2] || "").toLowerCase();
+
+  var calApp = Application("Calendar");
+
+  var startDate = new Date(startIso + "T00:00:00");
+  var endDate = new Date(endIso + "T23:59:59");
+
+  var calendars = calApp.calendars();
+  var out = [];
+
+  for (var i = 0; i < calendars.length; i++) {
+    var cal = calendars[i];
+    var calName = "";
+    try {
+      calName = cal.name();
+    } catch (e) {
+      continue;
+    }
+
+    if (calendarFilter && calName.toLowerCase().indexOf(calendarFilter) === -1) {
+      continue;
+    }
+
+    var events;
+    try {
+      events = cal.events();
+    } catch (e) {
+      continue;
+    }
+
+    for (var j = 0; j < events.length; j++) {
+      var ev = events[j];
+      var start;
+      try {
+        start = ev.startDate();
+      } catch (e) {
+        continue;
+      }
+      if (!(start instanceof Date) || isNaN(start.getTime())) continue;
+      if (start < startDate || start > endDate) continue;
+
+      var end = null;
+      try {
+        end = ev.endDate();
+      } catch (e) {}
+
+      var title = "";
+      try {
+        title = ev.summary() || "";
+      } catch (e) {
+        title = "";
+      }
+
+      var notes = "";
+      try {
+        notes = ev.description() || "";
+      } catch (e) {
+        notes = "";
+      }
+
+      var uid = "";
+      try {
+        uid = ev.uid() || "";
+      } catch (e) {
+        uid = "";
+      }
+
+      var allDay = false;
+      try {
+        allDay = !!ev.alldayEvent();
+      } catch (e) {
+        allDay = false;
+      }
+
+      if (!uid) {
+        uid = calName + "|" + start.toISOString() + "|" + title;
+      }
+
+      out.push({
+        event_id: String(uid),
+        calendar_name: String(calName),
+        title: String(title),
+        notes: String(notes),
+        start_at: start.toISOString(),
+        end_at: end instanceof Date && !isNaN(end.getTime()) ? end.toISOString() : null,
+        all_day: allDay ? 1 : 0,
+      });
+    }
+  }
+
+  return JSON.stringify(out);
+}
